@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00bdefdeb564345a5a2da195226c8234, type: 3}
   m_Name: SteeringSettings
   m_EditorClassIdentifier: 
-  _cohesionForceFactor: 1
-  _cohesionRadius: 10
-  _separationForceFactor: 1
-  _separationRadius: 5
-  _alignmentForceFactor: 1
-  m_alignmentRadius: 3
-  _maxSpeed: 20
+  _cohesionForceFactor: 4
+  _cohesionRadius: 2
+  _separationForceFactor: 5
+  _separationRadius: 10
+  _alignmentForceFactor: 5
+  m_alignmentRadius: 10
+  _maxSpeed: 30
   _minSpeed: 10
   _drag: 0.1
   _boundsForceFactor: 5
