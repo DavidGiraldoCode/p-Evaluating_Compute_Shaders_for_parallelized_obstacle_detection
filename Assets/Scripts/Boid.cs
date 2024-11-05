@@ -6,14 +6,33 @@ using UnityEngine;
 public class Boid : MonoBehaviour
 {
     public Fleet UAVFleet { get; set; }
-
+    [SerializeField] private SensingRay _forwardRay;
     public Vector3 Position;
     public Vector3 Velocity;
     public Vector3 Acceleration;
+
+    private void Awake()
+    {
+
+        if (_forwardRay == null)
+            _forwardRay = GetComponent<SensingRay>();
+
+        _forwardRay.Origin = transform.position;
+        _forwardRay.Direction = transform.forward;
+    }
+
     void Start()
     {
         // Set the initial velocidty to a random direction of length 1.
         Velocity = Random.insideUnitSphere * 2;
+    }
+
+    private void Update()
+    {
+        _forwardRay.Origin = transform.position;
+        _forwardRay.Direction = transform.forward;
+
+        Debug.DrawLine(_forwardRay.Origin, _forwardRay.Origin + (_forwardRay.Direction * _forwardRay.Reach), Color.blue);
     }
 
     #region Simulation
