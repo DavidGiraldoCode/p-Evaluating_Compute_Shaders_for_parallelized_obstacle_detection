@@ -3,7 +3,7 @@ using UnityEngine;
 public class Boid : MonoBehaviour
 {
     //Create a reference to an intance type Flock
-    public Flock Flock { get; set; }
+    public Fleet UAVFleet { get; set; }
 
     public Vector3 Position;
     public Vector3 Velocity;
@@ -26,24 +26,24 @@ public class Boid : MonoBehaviour
         Acceleration = Vector3.zero;
 
         //Apply forces
-        Acceleration += Flock.GetForceFromBounds(this);
+        Acceleration += UAVFleet.GetForceFromBounds(this);
         Acceleration += GetConstraintSpeedForce();
         Acceleration += GetSteeringForce();
-        if (Flock.GetFlow())
-            Acceleration += GetStationaryFlowForce();
+        // if (Flock.GetFlow())
+        //     Acceleration += GetStationaryFlowForce();
 
-        //TODO -------- Interpolation with the Vector Field
-        if (Flock.HasVectorField())
-            Acceleration += Flock.GetForceFromVectorField(this);
+        // //TODO -------- Interpolation with the Vector Field
+        // if (Flock.HasVectorField())
+        //     Acceleration += Flock.GetForceFromVectorField(this);
 
         //Step simulation
         Velocity += deltaTime * Acceleration;
         Position += 0.5f * deltaTime * deltaTime * Acceleration + deltaTime * Velocity;
 
         //? Visualizing projected flight
-        ProjectFlightOntoVectorField();
+        //ProjectFlightOntoVectorField();
 
-        
+
     }
 
     //Internal computation of the forces:
@@ -62,25 +62,25 @@ public class Boid : MonoBehaviour
         Vector3 averagePosition = Vector3.zero;
         //Boid forces
         //The iteration happens on a collection IEnumerable<Boid>
-        foreach (Boid neighbor in Flock.BoidManager.GetNeighbors(this, Flock.NeighborRadius))
+        foreach (Boid neighbor in UAVFleet.BoidManager.GetNeighbors(this, UAVFleet.Behaviour.NeighborRadius))
         {
             float distance = (neighbor.Position - Position).magnitude;
 
             //Separation force
-            if (distance < Flock.SeparationRadius)
+            if (distance < UAVFleet.Behaviour.SeparationRadius)
             {
-                separationForce += Flock.SeparationForceFactor * ((Flock.SeparationRadius - distance) / distance) * (Position - neighbor.Position);
+                separationForce += UAVFleet.Behaviour.SeparationForceFactor * ((UAVFleet.Behaviour.SeparationRadius - distance) / distance) * (Position - neighbor.Position);
             }
 
             //TODO Calculate average position/velocity here
             //Aerage velocity
-            if (distance < Flock.AlignmentRadius)
+            if (distance < UAVFleet.Behaviour.AlignmentRadius)
             {
                 velocityAccumulador += neighbor.Velocity;
             }
 
             //Aerage velocity
-            if (distance < Flock.CohesionRadius)
+            if (distance < UAVFleet.Behaviour.CohesionRadius)
             {
                 positionAccumulador += neighbor.Position;
             }
@@ -88,11 +88,11 @@ public class Boid : MonoBehaviour
         }
 
         //Set cohesion/alignment forces here
-        averageVelocity = velocityAccumulador / Flock.BoidManager.GetNeighborsCount();
-        alignmentForce = Flock.AlignmentForceFactor * (averageVelocity - Velocity);
+        averageVelocity = velocityAccumulador / UAVFleet.BoidManager.GetNeighborsCount();
+        alignmentForce = UAVFleet.Behaviour.AlignmentForceFactor * (averageVelocity - Velocity);
 
-        averagePosition = positionAccumulador / Flock.BoidManager.GetNeighborsCount();
-        cohesionForce = Flock.CohesionForceFactor * (averagePosition - Position);
+        averagePosition = positionAccumulador / UAVFleet.BoidManager.GetNeighborsCount();
+        cohesionForce = UAVFleet.Behaviour.CohesionForceFactor * (averagePosition - Position);
 
         return alignmentForce + cohesionForce + separationForce;
     }
@@ -102,18 +102,18 @@ public class Boid : MonoBehaviour
         Vector3 force = Vector3.zero;
 
         //Apply drag
-        force -= Flock.Drag * Velocity;
+        force -= UAVFleet.Behaviour.Drag * Velocity;
 
         float vel = Velocity.magnitude;
-        if (vel > Flock.MaxSpeed)
+        if (vel > UAVFleet.Behaviour.MaxSpeed)
         {
             //If speed is above the maximum allowed speed, apply extra friction force
-            force -= (20.0f * (vel - Flock.MaxSpeed) / vel) * Velocity;
+            force -= (20.0f * (vel - UAVFleet.Behaviour.MaxSpeed) / vel) * Velocity;
         }
-        else if (vel < Flock.MinSpeed)
+        else if (vel < UAVFleet.Behaviour.MinSpeed)
         {
             //Increase the speed slightly in the same direction if it is below the minimum
-            force += (5.0f * (Flock.MinSpeed - vel) / vel) * Velocity;
+            force += (5.0f * (UAVFleet.Behaviour.MinSpeed - vel) / vel) * Velocity;
         }
 
         return force;
@@ -148,16 +148,16 @@ public class Boid : MonoBehaviour
         return flow;
     }
 
-    //? HELPER METHODS to allow visualizing the projected position of the boid
+    // //? HELPER METHODS to allow visualizing the projected position of the boid
 
-    private void ProjectFlightOntoVectorField()
-    {
-        Vector3 projectedPosition = new Vector3(Position.x, 0, Position.z);
-        Vector3 boidVFSample = Flock.GetForceFromVectorField(this);
-        //Debug.Log("boidVFSample: " + boidVFSample);
-        Vector3 directionOnVF = projectedPosition + (boidVFSample * 0.01f);
-        //Vector3 projectedXZVelocity = new Vector3(Velocity.x, 0, Velocity.z);
-        Debug.DrawLine(Position, projectedPosition, Color.black);
-        Debug.DrawLine(projectedPosition, directionOnVF, Color.green);
-    }
+    // private void ProjectFlightOntoVectorField()
+    // {
+    //     Vector3 projectedPosition = new Vector3(Position.x, 0, Position.z);
+    //     Vector3 boidVFSample = UAVFleet.Behaviour.GetForceFromVectorField(this);
+    //     //Debug.Log("boidVFSample: " + boidVFSample);
+    //     Vector3 directionOnVF = projectedPosition + (boidVFSample * 0.01f);
+    //     //Vector3 projectedXZVelocity = new Vector3(Velocity.x, 0, Velocity.z);
+    //     Debug.DrawLine(Position, projectedPosition, Color.black);
+    //     Debug.DrawLine(projectedPosition, directionOnVF, Color.green);
+    // }
 }

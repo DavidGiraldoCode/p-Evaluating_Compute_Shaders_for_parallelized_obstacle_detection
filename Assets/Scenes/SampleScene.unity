@@ -469,7 +469,7 @@ GameObject:
   - component: {fileID: 1147352621}
   - component: {fileID: 1147352620}
   m_Layer: 0
-  m_Name: Flock
+  m_Name: Fleet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -502,24 +502,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 731e26e991243401ea8dcf2edbacf8dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_numberOfBirds: 50
-  m_birdPrefab: {fileID: -8893774763021301510, guid: ce4d5082d7a5146be8e9d1ee711752cc,
+  _numberOfUAV: 50
+  _uavPrefab: {fileID: -8893774763021301510, guid: ce4d5082d7a5146be8e9d1ee711752cc,
     type: 3}
-  m_spawnRadius: 10
-  spawnPointPrefab: {fileID: 1147352618}
-  m_bounds: {fileID: 1147352621}
-  m_boundsForceFactor: 5
-  m_cohesionForceFactor: 1
-  m_cohesionRadius: 3
-  m_separationForceFactor: 1
-  m_separationRadius: 2
-  m_alignmentForceFactor: 1
-  m_alignmentRadius: 3
-  m_maxSpeed: 8
-  m_minSpeed: 0
-  m_drag: 0.1
-  hasFlow: 0
-  hasVectorField: 0
+  _spawnRadius: 10
+  _spawnPointPrefab: {fileID: 1551471425}
+  _flyingBoundingVolume: {fileID: 0}
+  _steeringSetting: {fileID: 11400000, guid: f6cce9c711c6e4bbc86ac4df55df0307, type: 2}
 --- !u!65 &1147352621
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -541,6 +530,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 100, y: 100, z: 100}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1551471425
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1551471426}
+  m_Layer: 0
+  m_Name: FleetSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1551471426
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1551471425}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1776023453
 GameObject:
   m_ObjectHideFlags: 0
@@ -595,3 +615,4 @@ SceneRoots:
   - {fileID: 705175192}
   - {fileID: 1147352619}
   - {fileID: 1776023454}
+  - {fileID: 1551471426}
