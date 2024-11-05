@@ -1,8 +1,10 @@
 using UnityEngine;
 
+/// <summary>
+/// 🚧 Description WIP 🚧
+/// </summary>
 public class Boid : MonoBehaviour
 {
-    //Create a reference to an intance type Flock
     public Fleet UAVFleet { get; set; }
 
     public Vector3 Position;
@@ -10,15 +12,11 @@ public class Boid : MonoBehaviour
     public Vector3 Acceleration;
     void Start()
     {
-        //TODO review
+        // Set the initial velocidty to a random direction of length 1.
         Velocity = Random.insideUnitSphere * 2;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
+    #region Simulation
     //Custom Methods
     public void UpdateSimulation(float deltaTime)
     {
@@ -29,26 +27,18 @@ public class Boid : MonoBehaviour
         Acceleration += UAVFleet.GetForceFromBounds(this);
         Acceleration += GetConstraintSpeedForce();
         Acceleration += GetSteeringForce();
-        // if (Flock.GetFlow())
-        //     Acceleration += GetStationaryFlowForce();
-
-        // //TODO -------- Interpolation with the Vector Field
-        // if (Flock.HasVectorField())
-        //     Acceleration += Flock.GetForceFromVectorField(this);
 
         //Step simulation
         Velocity += deltaTime * Acceleration;
         Position += 0.5f * deltaTime * deltaTime * Acceleration + deltaTime * Velocity;
 
-        //? Visualizing projected flight
-        //ProjectFlightOntoVectorField();
-
-
     }
 
-    //Internal computation of the forces:
-
-    Vector3 GetSteeringForce()
+    /// <summary>
+    /// Computes the steering forces that involve the fleet
+    /// </summary>
+    /// <returns>Vector</returns>
+    private Vector3 GetSteeringForce()
     {
         Vector3 cohesionForce = Vector3.zero;
         Vector3 alignmentForce = Vector3.zero;
@@ -57,9 +47,11 @@ public class Boid : MonoBehaviour
         //Average velocity
         Vector3 velocityAccumulador = Vector3.zero;
         Vector3 averageVelocity = Vector3.zero;
+
         //Average position
         Vector3 positionAccumulador = Vector3.zero;
         Vector3 averagePosition = Vector3.zero;
+
         //Boid forces
         //The iteration happens on a collection IEnumerable<Boid>
         foreach (Boid neighbor in UAVFleet.BoidManager.GetNeighbors(this, UAVFleet.Behaviour.NeighborRadius))
@@ -72,7 +64,6 @@ public class Boid : MonoBehaviour
                 separationForce += UAVFleet.Behaviour.SeparationForceFactor * ((UAVFleet.Behaviour.SeparationRadius - distance) / distance) * (Position - neighbor.Position);
             }
 
-            //TODO Calculate average position/velocity here
             //Aerage velocity
             if (distance < UAVFleet.Behaviour.AlignmentRadius)
             {
@@ -87,7 +78,6 @@ public class Boid : MonoBehaviour
 
         }
 
-        //Set cohesion/alignment forces here
         averageVelocity = velocityAccumulador / UAVFleet.BoidManager.GetNeighborsCount();
         alignmentForce = UAVFleet.Behaviour.AlignmentForceFactor * (averageVelocity - Velocity);
 
@@ -119,45 +109,5 @@ public class Boid : MonoBehaviour
         return force;
     }
 
-    //Flow force
-    Vector3 GetStationaryFlowForce()
-    {
-        Vector3 flow = Vector3.zero;
-        Vector3 flowForceLocationOne = new Vector3(0, 4, 0);
-        Vector3 flowForceLocationTwo = new Vector3(0, -4, 0);
-        float flowRadius = 3f;
-
-        //Flow One
-        if ((flowForceLocationOne - Position).magnitude < flowRadius)
-        {
-            //Debuging
-            Debug.DrawLine(flowForceLocationOne, Position, Color.grey);
-            flow = Vector3.up * 40f;
-            return flow;
-        }
-
-        //Flow Two
-        if ((flowForceLocationTwo - Position).magnitude < flowRadius)
-        {
-            //Debuging
-            Debug.DrawLine(flowForceLocationTwo, Position, Color.grey);
-            flow = Vector3.down * 40f;
-            return flow;
-        }
-
-        return flow;
-    }
-
-    // //? HELPER METHODS to allow visualizing the projected position of the boid
-
-    // private void ProjectFlightOntoVectorField()
-    // {
-    //     Vector3 projectedPosition = new Vector3(Position.x, 0, Position.z);
-    //     Vector3 boidVFSample = UAVFleet.Behaviour.GetForceFromVectorField(this);
-    //     //Debug.Log("boidVFSample: " + boidVFSample);
-    //     Vector3 directionOnVF = projectedPosition + (boidVFSample * 0.01f);
-    //     //Vector3 projectedXZVelocity = new Vector3(Velocity.x, 0, Velocity.z);
-    //     Debug.DrawLine(Position, projectedPosition, Color.black);
-    //     Debug.DrawLine(projectedPosition, directionOnVF, Color.green);
-    // }
+    #endregion Simulation
 }
