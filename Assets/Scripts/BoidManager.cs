@@ -1,7 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 🚧 Description WIP 🚧
+/// </summary>
 public class BoidManager : MonoBehaviour
 {
     // Container of boids
@@ -13,18 +15,17 @@ public class BoidManager : MonoBehaviour
         m_boids = new List<Boid>();
 
         //Get ALL the instances of the Flock class on the scene.
-        var flocks = GameObject.FindObjectsOfType<Flock>();
+        var fleets = GameObject.FindObjectsOfType<Fleet>();
 
-        foreach (var flock in flocks)
+        foreach (var fleet in fleets)
         {
-            //For each flock instance, add a reference to THIS manager
-            flock.BoidManager = this;
-
+            //For each fleet instance, add a reference to THIS manager
+            fleet.BoidManager = this;
 
             //? void List<Boid>.AddRange(IEnumerable<Boid> collection)
             //Add a collection of Objects(Boid) to the List<T>, it uses the 
             //IEnumerable<T> interface.
-            m_boids.AddRange(flock.SpawnBirds());
+            m_boids.AddRange(fleet.SpawnBirds());
         }
     }
 
