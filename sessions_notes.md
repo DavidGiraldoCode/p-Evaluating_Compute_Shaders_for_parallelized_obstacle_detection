@@ -5,7 +5,11 @@ Details descriptions, thoughs and snippets.
 - Setup the basic Boids algorithm
 - The code documentation in WIP
 
-![alt text](Assets/Art/Images/first_setup_boids_moving.gif)
+<div style="display: flex; justify-content: space-around; align-items: center;">
+    <img src="Assets/Art/Images/first_setup_boids_moving.gif" alt="First Setup Boids Moving" style="max-width: 45%;">
+    <img src="Assets/Art/Images/wth_ray.gif" alt="With Ray" style="max-width: 45%;">
+</div>
+
 
 ### Next steps
 - Review voxel grid from Acerola's work, evaluate adding it vs own implementation
