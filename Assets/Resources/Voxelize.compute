@@ -235,7 +235,7 @@ void CS_PingPong(uint id : SV_DISPATCHTHREADID) {
 [numthreads(1,1,1)]
 void CS_QueryPosition(uint id : SV_DISPATCHTHREADID)
 {
-    int3 pointPos = _Point % _BoundsExtent;
+    float3 pointPos = _Point % (_BoundsExtent * 2.0);
     pointPos.xz += _BoundsExtent.xz; 
     pointPos /= _BoundsExtent * 2;
     pointPos *= _VoxelResolution;

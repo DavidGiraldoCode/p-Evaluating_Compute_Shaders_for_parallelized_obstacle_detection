@@ -84,7 +84,7 @@ Shader "Hidden/VisualizeVoxelsURP" {
                 ndotl *= ndotl;
 
                 // return float4(i.hashCol * lightColor * ndotl, 0.1f); // original
-                return float4(float4(0.8, 0, 0, 1) * lightColor * ndotl, 0.2f);
+                return float4(float4(0.8, 0, 0, 1) * lightColor * ndotl, 0.5f);
             }
 
             ENDHLSL
