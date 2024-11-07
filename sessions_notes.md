@@ -59,3 +59,27 @@ In the GPU:
 
 **Reference**
 - [1] Acerola, "I Tried Recreating Counter Strike 2’s Smoke Grenades," (2023). Accessed: Nov. 06, 2024. [Online Video]. Available: https://www.youtube.com/watch?v=ryB8hT5TMSg
+
+---
+
+## Session 2024-11-07: Fixing offset
+
+### Questions to be Answered:
+- Where in the pipeline the offset could happend?
+> The offset is taking place in two stages, in the CPU when instantiating the Bound. And inside the kernel
+```C#
+Vector3 boundsSize = boundsExtent * 2;
+debugBounds = new Bounds(new Vector3(0, boundsExtent.y, 0), boundsSize);
+```
+
+- What is causing the offset?
+> Upon further analisis, the problem lies in the voxelization kernel; the center of the AABB was not correctly translated into the Y-axis.
+```C
+centerPos.xz -= _BoundsExtent.xz;
+centerPos.y  -= _BoundsExtent.y; // This instruction was missing
+
+// New version
+centerPos.xzy -= _BoundsExtent.xzy;
+```
+The voxelizer is now working as expected.
+![alt text](Assets/Art/Images/voxelized_bunny.png)

@@ -5,7 +5,7 @@ using UnityEngine;
 public class Voxelizer : MonoBehaviour
 {
     #region Grid setup variables
-    [Tooltip("This represents the width, height and depth of the bouding volumen")]
+    [Tooltip("This represents the width, height and depth of the bouding volume")]
     public Vector3 boundsExtent = new Vector3(3, 3, 3);
 
     public float voxelSize = 0.25f;
@@ -96,7 +96,7 @@ public class Voxelizer : MonoBehaviour
         Vector3 boundsSize = boundsExtent * 2;
         debugBounds = new Bounds(new Vector3(0, boundsExtent.y, 0), boundsSize);
 
-        // Subdividing the bounds in each direction by the size of the voxel to get the total
+        // Subdividing the bounds in each direction by the size of the voxel to get the total at each dimension
         voxelsX = Mathf.CeilToInt(boundsSize.x / voxelSize);
         voxelsY = Mathf.CeilToInt(boundsSize.y / voxelSize);
         voxelsZ = Mathf.CeilToInt(boundsSize.z / voxelSize);
@@ -129,17 +129,17 @@ public class Voxelizer : MonoBehaviour
             // Creates two buffers, one to store all the vertices and one to store all the striangles of the mesh
             // 3 * sizeof(float) becase a vertex is a vector (float3), contains data for x,y and z
             verticesBuffer = new ComputeBuffer(sharedMesh.vertexCount, 3 * sizeof(float));
-            verticesBuffer.SetData(sharedMesh.vertices); // Sending a buffer with vectors in 3D
+            verticesBuffer.SetData(sharedMesh.vertices); // Attaching vectors in 3D to the buffer
             trianglesBuffer = new ComputeBuffer(sharedMesh.triangles.Length, sizeof(int));
             trianglesBuffer.SetData(sharedMesh.triangles);
 
             // Setting variables on the compute shader, recall the GPU knows nothing about WTF is going on on CPU world
-            voxelizeCompute.SetBuffer(1, "_StaticVoxels", staticVoxelsBuffer);
+            voxelizeCompute.SetBuffer(1, "_StaticVoxels", staticVoxelsBuffer);                          // Enough memory for how many voxels I need
             voxelizeCompute.SetBuffer(1, "_MeshVertices", verticesBuffer);
             voxelizeCompute.SetBuffer(1, "_MeshTriangleIndices", trianglesBuffer);
             voxelizeCompute.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
-            voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);
-            voxelizeCompute.SetMatrix("_MeshLocalToWorld", child.localToWorldMatrix); // Sends the matrix that accounts fro transformations
+            voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);                                   // Half the size of the total bounds, and the the off set in Y
+            voxelizeCompute.SetMatrix("_MeshLocalToWorld", child.localToWorldMatrix); // Sends the matrix that accounts for transformations from Local to World space
             voxelizeCompute.SetInt("_VoxelCount", totalVoxels);
             voxelizeCompute.SetInt("_TriangleCount", sharedMesh.triangles.Length);
             voxelizeCompute.SetFloat("_VoxelSize", voxelSize);
@@ -149,6 +149,7 @@ public class Voxelizer : MonoBehaviour
             // 128 is the number of thread per thread group, which detemine roughly how many voxels
             // are being process by one processor
             int threadGroupsX = Mathf.CeilToInt(totalVoxels / 128.0f);
+            // kernel CS_VoxelizeMesh 
             voxelizeCompute.Dispatch(1, threadGroupsX, 1, 1);
 
             // Deallocates the memory, utimetly this is called in the ~Destructor.

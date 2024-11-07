@@ -124,7 +124,7 @@ void CS_VoxelizeMesh(uint id : SV_DISPATCHTHREADID) {
         float3 centerPos = pos * _VoxelSize + halfVoxelSize;
         // This is offsetting the voxel inwards the Bounding volume
         // So the voxelization can happend considering where we want (from the center of the world)
-        centerPos.xz -= _BoundsExtent.xz;
+        centerPos.xzy -= _BoundsExtent.xzy;
 
         AABB aabb;
         aabb.center = centerPos;
