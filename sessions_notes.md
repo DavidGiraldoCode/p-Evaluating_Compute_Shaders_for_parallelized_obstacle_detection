@@ -83,3 +83,11 @@ centerPos.xzy -= _BoundsExtent.xzy;
 ```
 The voxelizer is now working as expected.
 ![alt text](Assets/Art/Images/voxelized_bunny.png)
+
+There is still a problem when debugging the total volume
+
+## Session 2024-11-07: Query a voxel
+
+### Questions to be Answered:
+- How owns the voxel grid?
+- How to query a position?

@@ -5,6 +5,7 @@ using UnityEngine;
 public class Voxelizer : MonoBehaviour
 {
     #region Grid setup variables
+    [Header("Grid setup variables")]
     [Tooltip("This represents the width, height and depth of the bouding volume")]
     public Vector3 boundsExtent = new Vector3(3, 3, 3);
 
@@ -15,15 +16,17 @@ public class Voxelizer : MonoBehaviour
     [Range(0.0f, 2.0f)]
     public float intersectionBias = 1.0f;
 
+    #endregion Grid setup variables
 
+    #region Debug tools
+    [Header("Debug tools")]
+    [Tooltip("The mesh that help visualize the voxelized result, is can be spheres as well")]
     public Mesh debugMesh;
-
+    public Transform debugPointTransformQuery;
     public bool debugStaticVoxels = false;
     public bool debugSmokeVoxels = false;
     public bool debugEdgeVoxels = false;
-
-    #endregion Grid setup variables
-
+    #endregion Debug tools
     public Vector3 maxRadius = new Vector3(1, 1, 1);
 
     [Range(0.01f, 5.0f)]
@@ -104,11 +107,12 @@ public class Voxelizer : MonoBehaviour
 
         // TODO study stride (the space we need in memory)
         // Memory allocation to store all the potential voxels that are going to be an obstacle
+        // Up to this moment the buffer is "empty", it only contains the capacity, but the voxel values are not set
         staticVoxelsBuffer = new ComputeBuffer(totalVoxels, 4);
 
         // Clear buffer
         voxelizeCompute.SetBuffer(0, "_Voxels", staticVoxelsBuffer);
-        
+
         // Sends the compute shader to the GPU
         // 128 is the number of thread per thread group, which detemine roughly how many voxels
         // are being process by one processor
@@ -137,6 +141,7 @@ public class Voxelizer : MonoBehaviour
             voxelizeCompute.SetBuffer(1, "_StaticVoxels", staticVoxelsBuffer);                          // Enough memory for how many voxels I need
             voxelizeCompute.SetBuffer(1, "_MeshVertices", verticesBuffer);
             voxelizeCompute.SetBuffer(1, "_MeshTriangleIndices", trianglesBuffer);
+
             voxelizeCompute.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
             voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);                                   // Half the size of the total bounds, and the the off set in Y
             voxelizeCompute.SetMatrix("_MeshLocalToWorld", child.localToWorldMatrix); // Sends the matrix that accounts for transformations from Local to World space
@@ -185,15 +190,28 @@ public class Voxelizer : MonoBehaviour
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
         args[0] = (uint)debugMesh.GetIndexCount(0);
         args[1] = (uint)totalVoxels;
-        args[2] = (uint)debugMesh.GetIndexStart(0);
-        args[3] = (uint)debugMesh.GetBaseVertex(0);
+        args[2] = (uint)debugMesh.GetIndexStart(0); //? starting index location
+        args[3] = (uint)debugMesh.GetBaseVertex(0); //? base vertex index
         argsBuffer.SetData(args);
 
     }
 
     private void Update()
     {
-        if (debugStaticVoxels || debugSmokeVoxels || debugEdgeVoxels) {
+        // Define the data in CPU we need to send to the GPU
+        Vector3 point = debugPointTransformQuery.position;
+        // Set that data into the compute shader
+        voxelizeCompute.SetVector("_SmokeOrigin", point);
+
+        // Clear the buffer
+        voxelizeCompute.SetBuffer(0, "_Voxels", smokeVoxelsBuffer);
+        voxelizeCompute.Dispatch(0, Mathf.CeilToInt(totalVoxels / 128.0f), 1, 1);
+
+        // kernel CS_Seed          // 2
+        voxelizeCompute.Dispatch(2, 1, 1, 1);
+
+        if (debugStaticVoxels || debugSmokeVoxels || debugEdgeVoxels)
+        {
             debugVoxelMaterial.SetBuffer("_StaticVoxels", staticVoxelsBuffer);
             debugVoxelMaterial.SetBuffer("_SmokeVoxels", smokeVoxelsBuffer);
             debugVoxelMaterial.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
@@ -208,6 +226,8 @@ public class Voxelizer : MonoBehaviour
             Graphics.DrawMeshInstancedIndirect(debugMesh, 0, debugVoxelMaterial, debugBounds, argsBuffer);
             // TODO Use Graphics.RenderMeshIndirect instead. Draws the same mesh multiple times using GPU instancing.
         }
+
+        Debug.Log("(staticVoxelsBuffer.count: " + staticVoxelsBuffer.count);
     }
 
     void OnDisable()

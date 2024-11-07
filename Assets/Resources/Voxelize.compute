@@ -6,6 +6,7 @@
 #pragma kernel CS_FillStep      // 3
 #pragma kernel CS_PingPong      // 4
 
+// The buffers are send on each frame every time we want to use the voxel grid in some way
 RWStructuredBuffer<int> _Voxels;
 RWStructuredBuffer<int> _SmokeVoxels;
 RWStructuredBuffer<int> _StaticVoxels;
@@ -153,11 +154,14 @@ void CS_VoxelizeMesh(uint id : SV_DISPATCHTHREADID) {
 [numthreads(1,1,1)]
 void CS_Seed(uint id : SV_DISPATCHTHREADID) {
     float3 seedPos = _SmokeOrigin % _BoundsExtent;
-    seedPos.xz += _BoundsExtent.xz;
+    seedPos.xz += _BoundsExtent.xz; //original
+    //seedPos.xzy -= _BoundsExtent.xzy;
     seedPos /= _BoundsExtent * 2;
     seedPos *= _VoxelResolution;
 
-    _SmokeVoxels[to1D(seedPos)] = _MaxFillSteps;
+    //_SmokeVoxels[to1D(seedPos)] = _MaxFillSteps; original
+    // As we recieved the position in 3D, we map it to 1D
+    _SmokeVoxels[to1D(seedPos)] = 1;
 }
 
 static int3 offsets[] = {
