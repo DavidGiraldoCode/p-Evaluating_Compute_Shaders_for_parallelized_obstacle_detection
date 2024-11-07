@@ -86,8 +86,20 @@ The voxelizer is now working as expected.
 
 There is still a problem when debugging the total volume
 
-## Session 2024-11-07: Query a voxel
+## Session 2024-11-07: Querying a Voxel and Correcting My Mistake
 
 ### Questions to be Answered:
-- How owns the voxel grid?
+- Who owns the voxel grid?
 - How to query a position?
+- Who visualizes the voxels?  
+> The shader visualization is a collaborative effort between the compute shader and the vertex/fragment shader.
+
+*The URP translation may have been done incorrectly, potentially causing the offset.*
+
+The bounding volume $$B$$ is defined by a half-vector $$h$$ and its center $$c$$.  
+From this, we derive the $$a_{min}$$ and $$a_{max}$$ points that represent the AABB:  
+$$ c = \frac{a_{min} + a_{max}}{2} $$  
+$$ h = \frac{a_{max} - a_{min}}{2} $$
+
+* Update: Found my error. The compute shader and C# script were not causing the strange offset. The real issue was in the vertex shader. When transforming the mesh (cube) to match the size and location of the voxels, the shader was translating the voxel by the half-diagonal, including the Y-axis. However, since the voxel already starts at Y=0, only the XZ translation was needed. 
+![alt text](Assets/Art/Images/voxel_bunny.png)

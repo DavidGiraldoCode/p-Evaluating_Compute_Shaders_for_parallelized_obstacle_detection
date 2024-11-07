@@ -6,7 +6,7 @@ public class Voxelizer : MonoBehaviour
 {
     #region Grid setup variables
     [Header("Grid setup variables")]
-    [Tooltip("This represents the width, height and depth of the bouding volume")]
+    [Tooltip("This represents a vector from the center to the corner of the AABB")]
     public Vector3 boundsExtent = new Vector3(3, 3, 3);
 
     public float voxelSize = 0.25f;
@@ -95,8 +95,11 @@ public class Voxelizer : MonoBehaviour
         // more here https://docs.unity3d.com/ScriptReference/Resources.html
         voxelizeCompute = (ComputeShader)Resources.Load("Voxelize");
 
-        // Smart way to just move the bounding volumen from the center, to sit on the XZ plane
+        // Taking the half diagonal vector of the boundsExtent time 2, we get 
+        // the total size of the bounding volume.
         Vector3 boundsSize = boundsExtent * 2;
+        // We use how much the half diagonal rises in the Y-axis to translate the bounding volume
+        // and place it on the plane XZ.
         debugBounds = new Bounds(new Vector3(0, boundsExtent.y, 0), boundsSize);
 
         // Subdividing the bounds in each direction by the size of the voxel to get the total at each dimension
@@ -107,13 +110,16 @@ public class Voxelizer : MonoBehaviour
 
         // TODO study stride (the space we need in memory)
         // Memory allocation to store all the potential voxels that are going to be an obstacle
-        // Up to this moment the buffer is "empty", it only contains the capacity, but the voxel values are not set
+        // Up to this moment the buffer is "empty", it only contains the capacity.
+        // The voxels are represented as an array of ints { 0, 0, 0, 0, 0, 0, ... n}
+        // `0` means is empty, `1` is full
         staticVoxelsBuffer = new ComputeBuffer(totalVoxels, 4);
 
-        // Clear buffer
+        // Clear buffer, set the staticVoxelsBuffer to be the _Voxels inside the i=0 kernel
+        // that just iterates and set all the voxels to `0`
         voxelizeCompute.SetBuffer(0, "_Voxels", staticVoxelsBuffer);
 
-        // Sends the compute shader to the GPU
+        // Sends the compute shader to the GPU, to run the kernel i=0
         // 128 is the number of thread per thread group, which detemine roughly how many voxels
         // are being process by one processor
         voxelizeCompute.Dispatch(0, Mathf.CeilToInt(totalVoxels / 128.0f), 1, 1);
@@ -143,7 +149,9 @@ public class Voxelizer : MonoBehaviour
             voxelizeCompute.SetBuffer(1, "_MeshTriangleIndices", trianglesBuffer);
 
             voxelizeCompute.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
-            voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);                                   // Half the size of the total bounds, and the the off set in Y
+            
+            // Half diagonal, how much offset in the Y-axis
+            voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);                                   
             voxelizeCompute.SetMatrix("_MeshLocalToWorld", child.localToWorldMatrix); // Sends the matrix that accounts for transformations from Local to World space
             voxelizeCompute.SetInt("_VoxelCount", totalVoxels);
             voxelizeCompute.SetInt("_TriangleCount", sharedMesh.triangles.Length);
@@ -165,6 +173,8 @@ public class Voxelizer : MonoBehaviour
         // Memory allocation again to store all position voxel that can become smoke
         smokeVoxelsBuffer = new ComputeBuffer(totalVoxels, sizeof(int));
         smokePingVoxelsBuffer = new ComputeBuffer(totalVoxels, sizeof(int));
+        
+        //pointVoxelsBuffer = new ComputeBuffer(totalVoxels, sizeof(int));
 
         // Clear buffers
         voxelizeCompute.SetBuffer(0, "_Voxels", smokeVoxelsBuffer);
@@ -185,6 +195,9 @@ public class Voxelizer : MonoBehaviour
         voxelizeCompute.SetBuffer(4, "_PingVoxels", smokePingVoxelsBuffer);
         voxelizeCompute.SetBuffer(4, "_StaticVoxels", staticVoxelsBuffer);
 
+        // kernel CS_QueryPosition
+        voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
+
         // Debug instancing args
         argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
@@ -201,19 +214,23 @@ public class Voxelizer : MonoBehaviour
         // Define the data in CPU we need to send to the GPU
         Vector3 point = debugPointTransformQuery.position;
         // Set that data into the compute shader
-        voxelizeCompute.SetVector("_SmokeOrigin", point);
+        voxelizeCompute.SetVector("_Point", point);
 
         // Clear the buffer
         voxelizeCompute.SetBuffer(0, "_Voxels", smokeVoxelsBuffer);
         voxelizeCompute.Dispatch(0, Mathf.CeilToInt(totalVoxels / 128.0f), 1, 1);
 
-        // kernel CS_Seed          // 2
-        voxelizeCompute.Dispatch(2, 1, 1, 1);
+        // kernel CS_QueryPosition          // 5
+        // I am currenty using the SmokeVoxels buffer
+        //voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
+        voxelizeCompute.Dispatch(5, 1, 1, 1);
 
         if (debugStaticVoxels || debugSmokeVoxels || debugEdgeVoxels)
         {
             debugVoxelMaterial.SetBuffer("_StaticVoxels", staticVoxelsBuffer);
             debugVoxelMaterial.SetBuffer("_SmokeVoxels", smokeVoxelsBuffer);
+            //debugVoxelMaterial.SetBuffer("_Voxels", smokeVoxelsBuffer);
+            
             debugVoxelMaterial.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
             debugVoxelMaterial.SetVector("_BoundsExtent", boundsExtent);
             debugVoxelMaterial.SetFloat("_VoxelSize", voxelSize);
@@ -227,7 +244,7 @@ public class Voxelizer : MonoBehaviour
             // TODO Use Graphics.RenderMeshIndirect instead. Draws the same mesh multiple times using GPU instancing.
         }
 
-        Debug.Log("(staticVoxelsBuffer.count: " + staticVoxelsBuffer.count);
+        //Debug.Log("(staticVoxelsBuffer.count: " + staticVoxelsBuffer.count);
     }
 
     void OnDisable()

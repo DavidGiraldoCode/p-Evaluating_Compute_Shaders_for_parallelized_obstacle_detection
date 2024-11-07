@@ -6,7 +6,11 @@
 #pragma kernel CS_FillStep      // 3
 #pragma kernel CS_PingPong      // 4
 
+//New pragma for querying point on voxels
+#pragma kernel CS_QueryPosition // 5
+
 // The buffers are send on each frame every time we want to use the voxel grid in some way
+// They just represent an array of ints
 RWStructuredBuffer<int> _Voxels;
 RWStructuredBuffer<int> _SmokeVoxels;
 RWStructuredBuffer<int> _StaticVoxels;
@@ -19,6 +23,7 @@ float4x4 _MeshLocalToWorld;
 float3 _VoxelResolution, _BoundsExtent;
 float3 _Radius;
 float3 _SmokeOrigin;
+float3 _Point;
 uint _VoxelCount, _TriangleCount;
 float _VoxelSize, _IntersectionBias;
 
@@ -30,6 +35,7 @@ uint to1D(uint3 pos) {
 }
 // Functions that maps 1 Dimesion (i) index into a 3 Dimensions coordinate (i,j,k)
 uint3 to3D(uint idx) {
+    // voxelRes is a vector of int values, with a magnitud sqrt ( width^2 * height^2 * depth^2 )
     uint3 voxelRes = uint3(_VoxelResolution);
     uint x = idx % (voxelRes.x);
     uint y = (idx / voxelRes.x) % voxelRes.y;
@@ -113,20 +119,22 @@ void CS_Clear(uint id : SV_DISPATCHTHREADID) {
     _Voxels[id.x] = 0;
 }
 //! use of potentially uninitialized variable (IntersectsTriangleAabb) 
+// The voxelization process is meant to happend ar compile time, not runtime
 [numthreads(128,1,1)]
 void CS_VoxelizeMesh(uint id : SV_DISPATCHTHREADID) {
     [branch] //? What is branch?
     if (0 <= id.x && id.x < _VoxelCount) {
+
         // The linear position on the thread in the x dimension, translates into 3D position
-        // The position is usually in the left, front low corner.
+        // This position is in world space, it is a point usually in the left, front low corner of the voxel
         float3 pos = to3D(id.x); 
         float halfVoxelSize = _VoxelSize * 0.5f;
 
         float3 centerPos = pos * _VoxelSize + halfVoxelSize;
         // This is offsetting the voxel inwards the Bounding volume
-        // So the voxelization can happend considering where we want (from the center of the world)
-        centerPos.xzy -= _BoundsExtent.xzy;
-
+        // The Y value is not included becase the voxels start at Y=0 already.
+        centerPos.xz -= _BoundsExtent.xz;
+        
         AABB aabb;
         aabb.center = centerPos;
         aabb.extents = halfVoxelSize * _IntersectionBias; // How much outside the voxel we want to consider
@@ -222,4 +230,15 @@ void CS_FillStep(uint id : SV_DISPATCHTHREADID) {
 [numthreads(128, 1, 1)]
 void CS_PingPong(uint id : SV_DISPATCHTHREADID) {
     _Voxels[id.x] = _PingVoxels[id.x];
+}
+
+[numthreads(1,1,1)]
+void CS_QueryPosition(uint id : SV_DISPATCHTHREADID)
+{
+    int3 pointPos = _Point % _BoundsExtent;
+    pointPos.xz += _BoundsExtent.xz; 
+    pointPos /= _BoundsExtent * 2;
+    pointPos *= _VoxelResolution;
+
+    _Voxels[to1D(pointPos)] = 1;
 }
