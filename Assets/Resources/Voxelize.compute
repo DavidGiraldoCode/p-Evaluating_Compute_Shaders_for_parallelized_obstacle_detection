@@ -8,6 +8,7 @@
 
 //New pragma for querying point on voxels
 #pragma kernel CS_QueryPosition // 5
+#pragma kernel CS_RayAABBIntersections //6
 
 // The buffers are send on each frame every time we want to use the voxel grid in some way
 // They just represent an array of ints
@@ -28,6 +29,10 @@ uint _VoxelCount, _TriangleCount;
 float _VoxelSize, _IntersectionBias;
 
 int _MaxFillSteps;
+
+// Ray
+float3 _RayOrigin, _RayDirection;
+float t;
 
 // Functions that maps 3 Dimensions coordinate (i,j,k) into a 1 Dimesion (i)
 uint to1D(uint3 pos) {
@@ -241,4 +246,16 @@ void CS_QueryPosition(uint id : SV_DISPATCHTHREADID)
     pointPos *= _VoxelResolution;
 
     _Voxels[to1D(pointPos)] = 1;
+}
+
+[numthreads(1,1,1)]
+void CS_RayAABBIntersections(uint id : SV_DISPATCHTHREADID)
+{
+    // GS GridSpace
+    float3 rayPosGS = _RayOrigin % (_BoundsExtent * 2.0);
+    rayPosGS.xz += _BoundsExtent.xz; 
+    rayPosGS /= _BoundsExtent * 2;
+    rayPosGS *= _VoxelResolution;
+
+    _Voxels[to1D(rayPosGS)] = 1;
 }

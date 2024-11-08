@@ -129,3 +129,7 @@ void CS_QueryPosition(uint id : SV_DISPATCHTHREADID)
 - The GPU will have to create a simple ray definition and perform the intersection test. The origin of the ray is given by the `position` of the boid and the `direction` by the `velocity * reach`.
 - A new kernel is needed to perform the computations. The challenge will be to determine a balanced number of thread groups.
 - The simpliest implementation could be: Create an intersection test that goes from point `A` to point `B`, and render all the voxels that are intersected.
+
+## Session 2024-11-08: Simple ray-aabb intersection
+
+- **Objective:** Create an intersection test that goes from point `A` to point `B`, and render all the voxels that are intersected.

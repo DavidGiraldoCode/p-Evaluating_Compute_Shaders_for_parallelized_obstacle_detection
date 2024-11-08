@@ -19,14 +19,18 @@ public class Voxelizer : MonoBehaviour
     #endregion Grid setup variables
 
     #region Debug tools
+
     [Header("Debug tools")]
     [Tooltip("The mesh that help visualize the voxelized result, is can be spheres as well")]
     public Mesh debugMesh;
     public Transform debugPointTransformQuery;
+    public Transform debugPointB;
     public bool debugStaticVoxels = false;
     public bool debugSmokeVoxels = false;
     public bool debugEdgeVoxels = false;
+
     #endregion Debug tools
+
     public Vector3 maxRadius = new Vector3(1, 1, 1);
 
     [Range(0.01f, 5.0f)]
@@ -34,9 +38,9 @@ public class Voxelizer : MonoBehaviour
 
     [Range(0, 128)]
     public int maxFillSteps = 16;
-
     public bool iterateFill = false;
     public bool constantFill = false;
+
 
     #region GPGPU buffers
     private ComputeBuffer staticVoxelsBuffer, smokeVoxelsBuffer, smokePingVoxelsBuffer, argsBuffer;
@@ -85,6 +89,12 @@ public class Voxelizer : MonoBehaviour
     //     return Easing(radius);
     // }
     #endregion Getters
+
+    #region ray parameter
+    private Vector3 rayOrigin, rayDirection;
+    [Range(0.0f, 10.0f)]
+    public float t = 1.0f;
+    #endregion ray parameter
 
     private void OnEnable()
     {
@@ -149,9 +159,9 @@ public class Voxelizer : MonoBehaviour
             voxelizeCompute.SetBuffer(1, "_MeshTriangleIndices", trianglesBuffer);
 
             voxelizeCompute.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
-            
+
             // Half diagonal, how much offset in the Y-axis
-            voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);                                   
+            voxelizeCompute.SetVector("_BoundsExtent", boundsExtent);
             voxelizeCompute.SetMatrix("_MeshLocalToWorld", child.localToWorldMatrix); // Sends the matrix that accounts for transformations from Local to World space
             voxelizeCompute.SetInt("_VoxelCount", totalVoxels);
             voxelizeCompute.SetInt("_TriangleCount", sharedMesh.triangles.Length);
@@ -173,7 +183,7 @@ public class Voxelizer : MonoBehaviour
         // Memory allocation again to store all position voxel that can become smoke
         smokeVoxelsBuffer = new ComputeBuffer(totalVoxels, sizeof(int));
         smokePingVoxelsBuffer = new ComputeBuffer(totalVoxels, sizeof(int));
-        
+
         //pointVoxelsBuffer = new ComputeBuffer(totalVoxels, sizeof(int));
 
         // Clear buffers
@@ -197,6 +207,8 @@ public class Voxelizer : MonoBehaviour
 
         // kernel CS_QueryPosition
         voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
+        //kernel CS_RayAABBIntersection //6
+        //voxelizeCompute.SetBuffer(6, "_Voxels", smokeVoxelsBuffer);
 
         // Debug instancing args
         argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
@@ -224,13 +236,15 @@ public class Voxelizer : MonoBehaviour
         // I am currenty using the SmokeVoxels buffer
         //voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
         voxelizeCompute.Dispatch(5, 1, 1, 1);
+        //UpdateRay();
+        //DebugRay();
 
         if (debugStaticVoxels || debugSmokeVoxels || debugEdgeVoxels)
         {
             debugVoxelMaterial.SetBuffer("_StaticVoxels", staticVoxelsBuffer);
             debugVoxelMaterial.SetBuffer("_SmokeVoxels", smokeVoxelsBuffer);
             //debugVoxelMaterial.SetBuffer("_Voxels", smokeVoxelsBuffer);
-            
+
             debugVoxelMaterial.SetVector("_VoxelResolution", new Vector3(voxelsX, voxelsY, voxelsZ));
             debugVoxelMaterial.SetVector("_BoundsExtent", boundsExtent);
             debugVoxelMaterial.SetFloat("_VoxelSize", voxelSize);
@@ -245,6 +259,8 @@ public class Voxelizer : MonoBehaviour
         }
 
         //Debug.Log("(staticVoxelsBuffer.count: " + staticVoxelsBuffer.count);
+
+
     }
 
     void OnDisable()
@@ -264,4 +280,27 @@ public class Voxelizer : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireCube(debugBounds.center, debugBounds.extents * 2);
     }
+
+    #region ray functions
+
+    void UpdateRay()
+    {
+        rayOrigin = debugPointTransformQuery.position;
+        rayDirection = (debugPointB.position - debugPointTransformQuery.position).normalized;
+
+        voxelizeCompute.SetVector("_RayOrigin", rayOrigin);
+        voxelizeCompute.SetVector("_RayDirection", rayDirection);
+
+        voxelizeCompute.SetBuffer(0, "_Voxels", smokeVoxelsBuffer);
+        voxelizeCompute.Dispatch(0, Mathf.CeilToInt(totalVoxels / 128.0f), 1, 1);
+
+        voxelizeCompute.Dispatch(6, 1, 1, 1);
+    }
+    private void DebugRay()
+    {
+        Debug.DrawLine(rayOrigin, rayOrigin + t * rayDirection);
+    }
+
+    #endregion
+
 }
