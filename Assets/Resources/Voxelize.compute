@@ -258,4 +258,16 @@ void CS_RayAABBIntersections(uint id : SV_DISPATCHTHREADID)
     rayPosGS *= _VoxelResolution;
 
     _Voxels[to1D(rayPosGS)] = 1;
+    // range or step the ray will march to compute an in intersection with the plane.
+    // Compare if the direction of the ray is opposite with the world Normal, to knoe if the voxel is being hit from front or back
+    // Check if the ray is not parallel or has passed certain threshold
+    // to the intersection test per axis align plane, meaning three times
+    // Get a point of intersection
+    // Compare the point with the voxels
+    // Shade the voxels
+
+    if (0 <= id.x && id.x < _VoxelCount)
+    {
+
+    }
 }

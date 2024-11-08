@@ -208,7 +208,7 @@ public class Voxelizer : MonoBehaviour
         // kernel CS_QueryPosition
         voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
         //kernel CS_RayAABBIntersection //6
-        //voxelizeCompute.SetBuffer(6, "_Voxels", smokeVoxelsBuffer);
+        voxelizeCompute.SetBuffer(6, "_Voxels", smokeVoxelsBuffer);
 
         // Debug instancing args
         argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
@@ -224,20 +224,21 @@ public class Voxelizer : MonoBehaviour
     private void Update()
     {
         // Define the data in CPU we need to send to the GPU
-        Vector3 point = debugPointTransformQuery.position;
-        // Set that data into the compute shader
-        voxelizeCompute.SetVector("_Point", point);
+        // Vector3 point = debugPointTransformQuery.position;
+        // // Set that data into the compute shader
+        // voxelizeCompute.SetVector("_Point", point);
 
-        // Clear the buffer
-        voxelizeCompute.SetBuffer(0, "_Voxels", smokeVoxelsBuffer);
-        voxelizeCompute.Dispatch(0, Mathf.CeilToInt(totalVoxels / 128.0f), 1, 1);
+        // // Clear the buffer
+        // voxelizeCompute.SetBuffer(0, "_Voxels", smokeVoxelsBuffer);
+        // voxelizeCompute.Dispatch(0, Mathf.CeilToInt(totalVoxels / 128.0f), 1, 1);
 
-        // kernel CS_QueryPosition          // 5
-        // I am currenty using the SmokeVoxels buffer
-        //voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
-        voxelizeCompute.Dispatch(5, 1, 1, 1);
-        //UpdateRay();
-        //DebugRay();
+        // // kernel CS_QueryPosition          // 5
+        // // I am currenty using the SmokeVoxels buffer
+        // //voxelizeCompute.SetBuffer(5, "_Voxels", smokeVoxelsBuffer);
+        // voxelizeCompute.Dispatch(5, 1, 1, 1);
+
+        UpdateRay();
+        DebugRay();
 
         if (debugStaticVoxels || debugSmokeVoxels || debugEdgeVoxels)
         {

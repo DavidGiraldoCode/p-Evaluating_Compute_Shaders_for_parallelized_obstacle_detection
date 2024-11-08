@@ -133,3 +133,5 @@ void CS_QueryPosition(uint id : SV_DISPATCHTHREADID)
 ## Session 2024-11-08: Simple ray-aabb intersection
 
 - **Objective:** Create an intersection test that goes from point `A` to point `B`, and render all the voxels that are intersected.
+
+- Something happend in the C#, and the compute shader stoped working. Apparently, having no geometries to voxelize creates a bug. And it does not allows for queries any more. I will have to check this.
