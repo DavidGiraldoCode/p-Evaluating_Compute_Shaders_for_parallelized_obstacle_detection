@@ -1,5 +1,4 @@
-# Ray-Voxel intersection method for obstacle avoidance
-## Enhaning flying agents with parallelized obstacle detection and avoidance using computer shaders
+# Volume Rendering - Participating media
 
 # Refereces
 Refer to [C# identifier naming rules and conventions](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names) to learn more

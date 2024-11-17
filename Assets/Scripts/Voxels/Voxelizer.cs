@@ -79,15 +79,24 @@ public class Voxelizer : MonoBehaviour
         return smokeOrigin;
     }
 
-    // public Vector3 GetSmokeRadius()
-    // {
-    //     return Vector3.Lerp(Vector3.zero, maxRadius, Easing(radius));
-    // }
+    public Vector3 GetSmokeRadius()
+    {
+        return Vector3.Lerp(Vector3.zero, maxRadius, Easing(radius));
+    }
 
-    // public float GetEasing()
-    // {
-    //     return Easing(radius);
-    // }
+    public float GetEasing()
+    {
+        return Easing(radius);
+    }
+    float Easing(float x) {
+        float ease = 0.0f;
+
+        if (x < 0.5f) ease = 2 * x * x;
+        else ease = 1.0f - (1.0f / (5.0f * (2.0f * x - 0.8f) + 1));
+
+        return Mathf.Min(1.0f, ease);
+        //return 1 - (1 - x) * (1 - x);
+    }
     #endregion Getters
 
     #region ray parameter
