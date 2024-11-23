@@ -1,9 +1,10 @@
-Shader "David/Participating_Media/RaySphere_Hit"
+Shader "David/Participating_Media/HomoTransmittance"
 {
     Properties
     {
         _CameraDepthTexture ("Depth Texture", 2D) = "white" {}
         _BaseColor ("Base color", Color) = (1.0, 1.0, 1.0, 1.0)
+        _Absorption ("Absorption coefficient", Range(0.0, 1.0)) = 0.5
         _FrontFace ("FrontFacexture", Float) = 1
         _Center ("Center", Vector) = (0.0, 0.0, 0.0, 0.0)
         _Radius ("Radius", Range(0.1, 2.0)) = 0.5
@@ -31,28 +32,9 @@ Shader "David/Participating_Media/RaySphere_Hit"
 
             #include "RaySphereIntersection.hlsl" // Include the external HLSL file
 
-            /*
-            bool hit(float3 origin, float3 direction, float3 sphere_center, float radius, out float t0, out float t1)
-            {   
-                float3 sc_to_orign = origin.xyz - sphere_center.xyz;
-                float a = dot(direction, direction);
-                float h = dot(direction, sc_to_orign);
-                float c = dot(sc_to_orign, sc_to_orign) - (radius * radius);
-
-                float discriminant = (h * h) - (a * c);
-                float sqr = sqrt(discriminant);
-
-                t0 = ((h * -1.0) - sqr) / a;
-                t1 = ((h * -1.0) + sqr) / a;
-                
-                if(discriminant < 0.0) return false;
-
-                return true;
-            }
-            */
-
             CBUFFER_START(UnityMaterial)
             float4  _BaseColor;
+            float  _Absorption;
             float4  _Center;
             float   _Radius;
             CBUFFER_END
@@ -60,12 +42,12 @@ Shader "David/Participating_Media/RaySphere_Hit"
             TEXTURE2D(_CameraDepthTexture);
             SAMPLER(sampler_CameraDepthTexture);
 
+            Light light;
 
             struct mesh_data
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
-                //float3 positionWS   : TEXCOORD2;
             };
 
             struct v2f
@@ -84,63 +66,78 @@ Shader "David/Participating_Media/RaySphere_Hit"
                 o.positionWS = mul(UNITY_MATRIX_M, v.vertex).xyz;
                 o.uv = v.uv;
                 o.viewPos = GetVertexPositionInputs(v.vertex.xyz).positionVS;
-                /*
-                View Space:
-                u [-1,1]
-                v [-1,1]
-                */
 
                 return o;
             }
 
             float4 frag (v2f i) : SV_Target
             {
-                // sample the texture
-                float3 ray_origin     = GetCameraPositionWS();
-                float3 ray_direction  = normalize(i.positionWS - ray_origin).xyz;
-                float t0, t1;
+                
 
                 float4 col;
-                
-                // // Convert screen space position (screenPos) to normalized device coordinates (NDC)
-                // float2 uv = i.screenPos.xy / i.screenPos.w;  // Convert to viewport space (0 to 1 range)
-                // uv = uv * 0.5 + 0.5;  // Adjust to [0,1] range, accounting for potential negative values
-
-                // // Get depth from the depth texture
-                // float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
-
-                // // Reconstruct the clip space position
-                // float4 clipPos = float4(uv * 2.0 - 1.0, depth, 1.0);
-
-                // // Convert clip space to view space using the inverse projection matrix
-                // float4 viewPos = mul(UNITY_MATRIX_I_P, clipPos);
-                // viewPos /= viewPos.w;  // Homogeneous divide to convert to 3D space
-
-                // // Convert from view space to world space using the inverse view matrix
-                // float4 worldPos = mul(UNITY_MATRIX_I_V, viewPos);
 
                 // Calculate ray
                 float3 rayOrigin = _WorldSpaceCameraPos;
-                // study normalize(worldPos.xyz - rayOrigin);
-                // works normalize(i.positionWS - rayOrigin);
-                // screen/view space normalize(i.viewPos - rayOrigin);
-
-                float3 v = mul(UNITY_MATRIX_I_V, i.viewPos);
-                //float3 rayDirection = normalize(v - rayOrigin);
-                // This creates and interesting effect, shows the projects sphere in the front and back
-
                 float3 rayDirection = normalize(i.positionWS - rayOrigin);
+                float t0, t1;
 
-                // For visualization
-                //return float4(rayDirection * 0.5 + 0.5, 1.0);
+                
+
+                light = GetMainLight();
 
                 if(hit(rayOrigin, rayDirection, _Center, _Radius, t0, t1))
                 {
                     float3 point0 = rayOrigin + rayDirection * t0;
                     float3 point1 = rayOrigin + rayDirection * t1;
-                    float d = length(point1 - point0);
-                    float normDistance = d / (2.0 * _Radius);
-                    col = float4(normDistance, normDistance, normDistance, 1.0);
+                    float distance = length(point1 - point0);
+
+                    float step_size = 0.2;
+
+                    int num_steps = ceil(distance / step_size);
+                    step_size = distance / (float)num_steps;
+
+                    float transparency = 1; // initialize transparency to 1
+
+                    // Beer's Law
+                    float transmittance = exp(-distance * _Absorption);
+                    //float normDistance = d / (2.0 * _Radius);
+
+                    float4 result;
+                    float4 lightColor = float4(light.color.xyz, 1.0);
+
+                    for(uint n = 0; n < num_steps; ++n)
+                    {
+                        float lt0, lt1;
+
+                        float t = t0 + (step_size * (n + 0.5));
+
+                        float3 sample_position = rayOrigin + rayDirection * t;
+
+                        float3 lightDirection = light.direction;
+                        // current sample transparency
+                        float sample_attenuation = exp(-step_size * _Absorption);
+
+                        // attenuate volume object transparency by current sample transmission value
+                        transparency *= sample_attenuation;
+                        
+
+                        if(hit(sample_position, lightDirection, _Center, _Radius, lt0, lt1))
+                        {
+                            float3 t1_position = sample_position + lightDirection * lt1;
+                            float distaceToLight = length(t1_position - sample_position);
+
+                            float light_attenuation = exp(-distaceToLight * _Absorption);
+                            result += transparency * lightColor * light_attenuation * step_size;
+
+                        }
+                        // finally attenuate the result by sample transparency
+                        //result *= sample_transparency;
+                    }
+
+                    
+                    //col = float4(0,0,0,0) * transmittance + ((1 - transmittance) * _BaseColor);
+                    
+                    col = float4(0,0,0,1) * transparency + result;
                 }
                 else
                 {
