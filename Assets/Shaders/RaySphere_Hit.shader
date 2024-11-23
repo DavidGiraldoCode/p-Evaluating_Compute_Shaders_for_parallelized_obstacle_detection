@@ -25,6 +25,7 @@ Shader "David/Participating_Media/RaySphere_Hit"
             HLSLPROGRAM
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl" 
+            //https://github.com/Unity-Technologies/Graphics/blob/master/Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl
             #pragma vertex vert
             #pragma fragment frag
 
@@ -60,7 +61,7 @@ Shader "David/Participating_Media/RaySphere_Hit"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
-                float3 positionWS   : TEXCOORD2;
+                //float3 positionWS   : TEXCOORD2;
             };
 
             struct v2f
@@ -68,16 +69,22 @@ Shader "David/Participating_Media/RaySphere_Hit"
                 float2 uv : TEXCOORD0;
                 float3 positionWS   : TEXCOORD2;
                 float4 screenPos : SV_POSITION;
+                float3 viewPos : TEXCOORD3;
             };
 
             v2f vert (mesh_data v)
             {
                 v2f o;
-                //o.vertex = TransformObjectToHClip(v.vertex);
+                o.screenPos = TransformObjectToHClip(v.vertex);
                 // ref https://github.com/Unity-Technologies/Graphics/blob/master/Packages/com.unity.render-pipelines.universal/ShaderLibrary/Input.hlsl
                 o.positionWS = mul(UNITY_MATRIX_M, v.vertex).xyz;
                 o.uv = v.uv;
-                o.screenPos = TransformObjectToHClip(v.vertex);
+                o.viewPos = GetVertexPositionInputs(v.vertex.xyz).positionVS;
+                /*
+                View Space:
+                u [-1,1]
+                v [-1,1]
+                */
 
                 return o;
             }
@@ -91,26 +98,34 @@ Shader "David/Participating_Media/RaySphere_Hit"
 
                 float4 col;
                 
-                // Convert screen space position (screenPos) to normalized device coordinates (NDC)
-                float2 uv = i.screenPos.xy / i.screenPos.w;  // Convert to viewport space (0 to 1 range)
-                uv = uv * 0.5 + 0.5;  // Adjust to [0,1] range, accounting for potential negative values
+                // // Convert screen space position (screenPos) to normalized device coordinates (NDC)
+                // float2 uv = i.screenPos.xy / i.screenPos.w;  // Convert to viewport space (0 to 1 range)
+                // uv = uv * 0.5 + 0.5;  // Adjust to [0,1] range, accounting for potential negative values
 
-                // Get depth from the depth texture
-                float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
+                // // Get depth from the depth texture
+                // float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r;
 
-                // Reconstruct the clip space position
-                float4 clipPos = float4(uv * 2.0 - 1.0, depth, 1.0);
+                // // Reconstruct the clip space position
+                // float4 clipPos = float4(uv * 2.0 - 1.0, depth, 1.0);
 
-                // Convert clip space to view space using the inverse projection matrix
-                float4 viewPos = mul(UNITY_MATRIX_I_P, clipPos);
-                viewPos /= viewPos.w;  // Homogeneous divide to convert to 3D space
+                // // Convert clip space to view space using the inverse projection matrix
+                // float4 viewPos = mul(UNITY_MATRIX_I_P, clipPos);
+                // viewPos /= viewPos.w;  // Homogeneous divide to convert to 3D space
 
-                // Convert from view space to world space using the inverse view matrix
-                float4 worldPos = mul(UNITY_MATRIX_I_V, viewPos);
+                // // Convert from view space to world space using the inverse view matrix
+                // float4 worldPos = mul(UNITY_MATRIX_I_V, viewPos);
 
                 // Calculate ray
                 float3 rayOrigin = _WorldSpaceCameraPos;
-                float3 rayDirection = normalize(i.positionWS - rayOrigin);//normalize(worldPos.xyz - rayOrigin);
+                // study normalize(worldPos.xyz - rayOrigin);
+                // works normalize(i.positionWS - rayOrigin);
+                // screen/view space normalize(i.viewPos - rayOrigin);
+
+                float3 v = mul(UNITY_MATRIX_I_V, i.viewPos);
+                //float3 rayDirection = normalize(v - rayOrigin);
+                // This creates and interesting effect, shows the projects sphere in the front and back
+
+                float3 rayDirection = normalize(i.positionWS - rayOrigin);
 
                 // For visualization
                 //return float4(rayDirection * 0.5 + 0.5, 1.0);
@@ -129,6 +144,10 @@ Shader "David/Participating_Media/RaySphere_Hit"
                 }
 
                 return col;
+                //return float4(i.viewPos.xyz, 1.0);
+                //return float4(v.xyz, 1.0);
+                //return float4(i.positionWS.xyz, 1.0);
+
             }
             ENDHLSL
         }
