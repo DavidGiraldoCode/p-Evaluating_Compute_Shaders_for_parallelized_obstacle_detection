@@ -34,6 +34,7 @@ Shader "David/Participating_Media/HomoTransmittance"
 
             #include "RaySphereIntersection.hlsl" // Include the external HLSL file
             #define M_PI 3.141592
+            #define THRESHOLD 1e-3
 
             CBUFFER_START(UnityMaterial)
             float4  _BaseColor;
@@ -72,6 +73,61 @@ Shader "David/Participating_Media/HomoTransmittance"
                 return 1 / (4 * M_PI) * (1 - g * g) / (denom * sqrt(denom));
             }
 
+            //psudo-random
+            float hash(uint n) {
+                // Integer hash function for randomness
+                n = (n << 13U) ^ n;
+                n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
+                return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
+            }
+
+            // Initialize the permutation table inline
+            int p[256];
+
+            // Function to initialize the permutation table
+            void initializePermutationTable()
+            {
+                for (int i = 0; i < 256; i++)
+                {
+                    p[i] = int(hash(i) * 255);
+                }
+            }
+ 
+            float fade(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+            float lerp(float t, float a, float b) { return a + t * (b - a); }
+            float grad(int hash, float x, float y, float z)
+            {
+                int h = hash & 15;
+                float u = h<8 ? x : y,
+                    v = h<4 ? y : h==12||h==14 ? x : z;
+                return ((h&1) == 0 ? u : -u) + ((h&2) == 0 ? v : -v);
+            }
+            
+            float noise(float x, float y, float z)
+            {
+                initializePermutationTable();
+                int X = (int)floor(x) & 255,
+                    Y = (int)floor(y) & 255,
+                    Z = (int)floor(z) & 255;
+                x -= floor(x);
+                y -= floor(y);
+                z -= floor(z);
+                float u = fade(x),
+                    v = fade(y),
+                    w = fade(z);
+                int A = p[X  ]+Y, AA = p[A]+Z, AB = p[A+1]+Z,
+                    B = p[X+1]+Y, BA = p[B]+Z, BB = p[B+1]+Z;
+            
+                return lerp(w, lerp(v, lerp(u, grad(p[AA  ], x  , y  , z   ),
+                                            grad(p[BA  ], x-1, y  , z   )),
+                                    lerp(u, grad(p[AB  ], x  , y-1, z   ),
+                                            grad(p[BB  ], x-1, y-1, z   ))),
+                            lerp(v, lerp(u, grad(p[AA+1], x  , y  , z-1 ),
+                                            grad(p[BA+1], x-1, y  , z-1 )),
+                                    lerp(u, grad(p[AB+1], x  , y-1, z-1 ),
+                                            grad(p[BB+1], x-1, y-1, z-1 ))));
+            }
+
             v2f vert (mesh_data v)
             {
                 v2f o;
@@ -86,9 +142,11 @@ Shader "David/Participating_Media/HomoTransmittance"
 
             float4 frag (v2f i) : SV_Target
             {
-                float4 volumeColor = float4(0.0, 0.0, 0.0, 1.0);
-                float transmittance = 1.0; // initialize transparency to 1
+                float4 volumeColor      = float4(0.0, 0.0, 0.0, 0.0);
+                float4 accumulatedColor = float4(0.0, 0.0, 0.0, 0.0);
 
+                float transmittance = 1.0; // initialize transparency to 1
+                _Density = 0.0; // override density to then be changed by noise function
                 // Calculate ray
                 float3 rayOrigin = _WorldSpaceCameraPos;
                 float3 rayDirection = normalize(i.positionWS - rayOrigin);
@@ -116,15 +174,17 @@ Shader "David/Participating_Media/HomoTransmittance"
                     light                   = GetMainLight();
                     float4 lightColor       = float4(light.color.xyz, 1.0);
                     float3 lightDirection   = light.direction;
-                    float4 accumulatedColor = float4(0.0, 0.0, 0.0, 0.0);
 
                     for(uint n = 0; n < num_steps; ++n)
                     {
                         float lt0, lt1;
 
+                        //float t = t0 + (step_size * ((float)n + hash(n))); //Jittering the Sample Positions
                         float t = t0 + (step_size * (n + 0.5));
 
                         float3 sample_position = rayOrigin + rayDirection * t;
+                        // Density is changed by samplying the procedurally generated density field
+                        _Density = (noise(sample_position.x, sample_position.y, sample_position.z) + 1.0) / 2.0;
                         
                         // current sample transparency, Beer's Law
                         // represents how much of the light is being absorbed by the sample
@@ -146,8 +206,14 @@ Shader "David/Participating_Media/HomoTransmittance"
                         }
                         // finally attenuate the result by sample transparency
                         //accumulatedColor *= sample_attenuation;
-                        if (transmittance < 1e-3)
-                            break;
+                        int d = 2; // Russian roulette
+                        if (transmittance < THRESHOLD)
+                        {
+                            if (hash(n) > 1.0 / d) // we stop here
+                                break;
+                            else
+                                transmittance *= d; // we continue but compensate
+                        }
                     }
 
                     
