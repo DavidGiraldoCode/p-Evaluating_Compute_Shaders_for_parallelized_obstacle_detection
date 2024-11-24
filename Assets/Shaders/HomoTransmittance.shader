@@ -4,10 +4,12 @@ Shader "David/Participating_Media/HomoTransmittance"
     {
         _CameraDepthTexture ("Depth Texture", 2D) = "white" {}
         _BaseColor ("Base color", Color) = (1.0, 1.0, 1.0, 1.0)
-        _Absorption ("Absorption coefficient", Range(0.0, 1.0)) = 0.5
-        _FrontFace ("FrontFacexture", Float) = 1
         _Center ("Center", Vector) = (0.0, 0.0, 0.0, 0.0)
-        _Radius ("Radius", Range(0.1, 2.0)) = 0.5
+        _Radius ("Radius", Range(0.1, 4.0)) = 0.5
+        _Absorption ("Absorption coefficient", Range(0.0, 1.0)) = 0.5
+        _Scattering ("Scattering coefficient", Range(0.0, 1.0)) = 0.5
+        _Density ("Volume density", Range(0.0, 5.0)) = 0.5
+        _Asymmetry ("P(x) Asymmetry", Range(-1.0, 1.0)) = 0.0
     }
     SubShader
     {
@@ -31,18 +33,23 @@ Shader "David/Participating_Media/HomoTransmittance"
             #pragma fragment frag
 
             #include "RaySphereIntersection.hlsl" // Include the external HLSL file
+            #define M_PI 3.141592
 
             CBUFFER_START(UnityMaterial)
             float4  _BaseColor;
-            float  _Absorption;
             float4  _Center;
             float   _Radius;
+            float   _Absorption; // Control how opaque the volume is
+            float   _Scattering;
+            float   _Density; // Scale the contribution of the extintion coefficient
+            float   _Asymmetry;
             CBUFFER_END
 
             TEXTURE2D(_CameraDepthTexture);
             SAMPLER(sampler_CameraDepthTexture);
 
             Light light;
+            float extinction;
 
             struct mesh_data
             {
@@ -58,6 +65,13 @@ Shader "David/Participating_Media/HomoTransmittance"
                 float3 viewPos : TEXCOORD3;
             };
 
+            // the Henyey-Greenstein phase function by Scratchapixel's Jean-Colas Prunier 
+            float phase(const float g, const float cos_theta)
+            {
+                float denom = 1 + g * g - 2 * g * cos_theta;
+                return 1 / (4 * M_PI) * (1 - g * g) / (denom * sqrt(denom));
+            }
+
             v2f vert (mesh_data v)
             {
                 v2f o;
@@ -72,13 +86,15 @@ Shader "David/Participating_Media/HomoTransmittance"
 
             float4 frag (v2f i) : SV_Target
             {
-                float4 volumeColor = float4(0.0, 0.0, 0.0, 0.0);
-                float transparency = 1; // initialize transparency to 1
+                float4 volumeColor = float4(0.0, 0.0, 0.0, 1.0);
+                float transmittance = 1.0; // initialize transparency to 1
 
                 // Calculate ray
                 float3 rayOrigin = _WorldSpaceCameraPos;
                 float3 rayDirection = normalize(i.positionWS - rayOrigin);
                 float t0, t1;
+
+                extinction = _Absorption + _Scattering;
 
                 if(hit(rayOrigin, rayDirection, _Center, _Radius, t0, t1))
                 {
@@ -112,34 +128,37 @@ Shader "David/Participating_Media/HomoTransmittance"
                         
                         // current sample transparency, Beer's Law
                         // represents how much of the light is being absorbed by the sample
-                        float sample_attenuation = exp(-step_size * _Absorption);
+                        float sample_attenuation = exp(-step_size * extinction * _Density);
 
                         // attenuate volume's global transparency by current sample transmission value
-                        transparency *= sample_attenuation;
+                        transmittance *= sample_attenuation;
 
                         if(hit(sample_position, lightDirection, _Center, _Radius, lt0, lt1))
                         {
                             //float3 t1_position = sample_position + lightDirection * lt1;
                             //float distaceToLight = length(t1_position - sample_position);// lt1 - lt0;
-
+                            float cos_theta = dot(rayDirection, lightDirection); // Cos theta for the phase function
                             // in-scattering Li(x)
-                            float light_attenuation = exp(-lt1 * _Absorption); //exp(-distaceToLight * _Absorption); //
-                            accumulatedColor += transparency * lightColor * light_attenuation * step_size;
+                            float light_attenuation = exp(-lt1 * extinction * _Density); // exp(-lt1 * _Absorption); // exp(-distaceToLight * _Absorption); //
+                            //light contribution due to in-scattering is proportional to the scattering coefficient
+                            accumulatedColor += lightColor * light_attenuation * phase(_Asymmetry, cos_theta) * _Scattering * _Density * step_size;
 
                         }
                         // finally attenuate the result by sample transparency
                         //accumulatedColor *= sample_attenuation;
+                        if (transmittance < 1e-3)
+                            break;
                     }
 
                     
                     //col = float4(0,0,0,0) * transmittance + ((1 - transmittance) * _BaseColor);
                     //transparency = clamp(transparency, 0.0, 1.0);
 
-                    volumeColor = volumeColor * transparency + accumulatedColor;
+                    volumeColor = float4(0,0,0,1) * (1.0 - transmittance) + accumulatedColor;
                 }
                 else
                 {
-                    volumeColor = float4(0,0,0,0);;
+                    volumeColor = float4(0,0,0,0);
                 }
 
                 return volumeColor;
