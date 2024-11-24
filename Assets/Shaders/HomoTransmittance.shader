@@ -72,38 +72,35 @@ Shader "David/Participating_Media/HomoTransmittance"
 
             float4 frag (v2f i) : SV_Target
             {
-                
-
-                float4 col;
+                float4 volumeColor = float4(0.0, 0.0, 0.0, 0.0);
+                float transparency = 1; // initialize transparency to 1
 
                 // Calculate ray
                 float3 rayOrigin = _WorldSpaceCameraPos;
                 float3 rayDirection = normalize(i.positionWS - rayOrigin);
                 float t0, t1;
 
-                
-
-                light = GetMainLight();
-
                 if(hit(rayOrigin, rayDirection, _Center, _Radius, t0, t1))
                 {
+                    
+
                     float3 point0 = rayOrigin + rayDirection * t0;
                     float3 point1 = rayOrigin + rayDirection * t1;
-                    float distance = length(point1 - point0);
+                    float distance = t1 - t0;//length(point1 - point0);
 
                     float step_size = 0.2;
 
                     int num_steps = ceil(distance / step_size);
                     step_size = distance / (float)num_steps;
 
-                    float transparency = 1; // initialize transparency to 1
-
                     // Beer's Law
-                    float transmittance = exp(-distance * _Absorption);
+                    //float transmittance = exp(-distance * _Absorption);
                     //float normDistance = d / (2.0 * _Radius);
 
-                    float4 result;
-                    float4 lightColor = float4(light.color.xyz, 1.0);
+                    light                   = GetMainLight();
+                    float4 lightColor       = float4(light.color.xyz, 1.0);
+                    float3 lightDirection   = light.direction;
+                    float4 accumulatedColor = float4(0.0, 0.0, 0.0, 0.0);
 
                     for(uint n = 0; n < num_steps; ++n)
                     {
@@ -112,39 +109,40 @@ Shader "David/Participating_Media/HomoTransmittance"
                         float t = t0 + (step_size * (n + 0.5));
 
                         float3 sample_position = rayOrigin + rayDirection * t;
-
-                        float3 lightDirection = light.direction;
-                        // current sample transparency
+                        
+                        // current sample transparency, Beer's Law
+                        // represents how much of the light is being absorbed by the sample
                         float sample_attenuation = exp(-step_size * _Absorption);
 
-                        // attenuate volume object transparency by current sample transmission value
+                        // attenuate volume's global transparency by current sample transmission value
                         transparency *= sample_attenuation;
-                        
 
                         if(hit(sample_position, lightDirection, _Center, _Radius, lt0, lt1))
                         {
-                            float3 t1_position = sample_position + lightDirection * lt1;
-                            float distaceToLight = length(t1_position - sample_position);
+                            //float3 t1_position = sample_position + lightDirection * lt1;
+                            //float distaceToLight = length(t1_position - sample_position);// lt1 - lt0;
 
-                            float light_attenuation = exp(-distaceToLight * _Absorption);
-                            result += transparency * lightColor * light_attenuation * step_size;
+                            // in-scattering Li(x)
+                            float light_attenuation = exp(-lt1 * _Absorption); //exp(-distaceToLight * _Absorption); //
+                            accumulatedColor += transparency * lightColor * light_attenuation * step_size;
 
                         }
                         // finally attenuate the result by sample transparency
-                        //result *= sample_transparency;
+                        //accumulatedColor *= sample_attenuation;
                     }
 
                     
                     //col = float4(0,0,0,0) * transmittance + ((1 - transmittance) * _BaseColor);
-                    
-                    col = float4(0,0,0,1) * transparency + result;
+                    //transparency = clamp(transparency, 0.0, 1.0);
+
+                    volumeColor = volumeColor * transparency + accumulatedColor;
                 }
                 else
                 {
-                    col = float4(0,0,0,0);;
+                    volumeColor = float4(0,0,0,0);;
                 }
 
-                return col;
+                return volumeColor;
                 //return float4(i.viewPos.xyz, 1.0);
                 //return float4(v.xyz, 1.0);
                 //return float4(i.positionWS.xyz, 1.0);

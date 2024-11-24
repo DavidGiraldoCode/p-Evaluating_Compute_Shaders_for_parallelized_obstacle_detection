@@ -7,6 +7,7 @@ public class RaySphereIntersection : MonoBehaviour
     private Ray _ray;
     private float t0, t1;
     [SerializeField] private float _scalar = 1.0f;
+    [SerializeField] private Light _light;
 
     private void Update()
     {
@@ -17,6 +18,17 @@ public class RaySphereIntersection : MonoBehaviour
         {
             Vector3 p0 = _ray.origin + _ray.direction * t0;
             Vector3 p1 = _ray.origin + _ray.direction * t1;
+
+            float half = (t1 - t0) * 0.5f;
+
+            Vector3 p_middle = _ray.origin + _ray.direction * (t0 + half);
+            Vector3 lightDir = _light.transform.forward * -1;
+            float lgt_t0, lgt_t1;
+            if(hit(p_middle, lightDir, new Vector3(0,0,0) , 0.5f, out lgt_t0, out lgt_t1))
+            {
+                Vector3 upperHit = p_middle + lightDir * lgt_t1;
+                 Debug.DrawLine( p_middle, upperHit, Color.green);
+            }
 
             Debug.DrawLine( p0, p1, Color.red);
         }
