@@ -98,10 +98,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Absorption: 0.694
+    - _Absorption: 0.435
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _Asymmetry: 0.51
+    - _Asymmetry: 0.54
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -123,9 +123,9 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
-    - _Radius: 1.94
+    - _Radius: 2.35
     - _ReceiveShadows: 1
-    - _Scattering: 0.879
+    - _Scattering: 0.097
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

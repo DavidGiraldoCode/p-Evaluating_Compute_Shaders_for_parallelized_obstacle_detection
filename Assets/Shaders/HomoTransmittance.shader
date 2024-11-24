@@ -20,7 +20,7 @@ Shader "David/Participating_Media/HomoTransmittance"
             "RenderPipeline" = "UniversalPipeline"
         }
         LOD 100
-        Cull Off
+        //Cull Off
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -89,7 +89,7 @@ Shader "David/Participating_Media/HomoTransmittance"
             {
                 for (int i = 0; i < 256; i++)
                 {
-                    p[i] = int(hash(i) * 255);
+                    p[i] = int((hash(i) - 1) * 255) ;
                 }
             }
  
@@ -174,17 +174,19 @@ Shader "David/Participating_Media/HomoTransmittance"
                     light                   = GetMainLight();
                     float4 lightColor       = float4(light.color.xyz, 1.0);
                     float3 lightDirection   = light.direction;
-
+                    float f = 0.0;
+                    f += sin(_Time * 5) * 20.0 + 5;// sin(_Time );
                     for(uint n = 0; n < num_steps; ++n)
                     {
                         float lt0, lt1;
 
-                        //float t = t0 + (step_size * ((float)n + hash(n))); //Jittering the Sample Positions
-                        float t = t0 + (step_size * (n + 0.5));
+                        float t = t0 + (step_size * ((float)n + hash(n))); //Jittering the Sample Positions
+                        //float t = t0 + (step_size * (n + 0.5));
 
                         float3 sample_position = rayOrigin + rayDirection * t;
                         // Density is changed by samplying the procedurally generated density field
-                        _Density = (noise(sample_position.x, sample_position.y, sample_position.z) + 1.0) / 2.0;
+                        
+                        _Density = (noise(abs(sample_position.x + f), abs(sample_position.y - f), abs(sample_position.z + f)) + 1.0) / 2.0;
                         
                         // current sample transparency, Beer's Law
                         // represents how much of the light is being absorbed by the sample
@@ -220,7 +222,8 @@ Shader "David/Participating_Media/HomoTransmittance"
                     //col = float4(0,0,0,0) * transmittance + ((1 - transmittance) * _BaseColor);
                     //transparency = clamp(transparency, 0.0, 1.0);
 
-                    volumeColor = float4(0,0,0,1) * (1.0 - transmittance) + accumulatedColor;
+                    //volumeColor = float4(0.5,0.5,0.5, 1) * (1.0 - transmittance) + accumulatedColor;
+                    volumeColor =  (1.0 - transmittance) + accumulatedColor;
                 }
                 else
                 {
