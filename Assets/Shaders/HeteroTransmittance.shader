@@ -10,6 +10,8 @@ Shader "David/Participating_Media/HeteroTransmittance"
         _Scattering ("Scattering coefficient", Range(0.0, 1.0)) = 0.5
         //_Density ("Volume density", Range(0.0, 5.0)) = 0.5
         _Asymmetry ("P(x) Asymmetry", Range(-1.0, 1.0)) = 0.0
+        _SmokeScale ("SmokeScale", Range(0.0, 10.0)) = 5.0
+        _Frequency ("Frequency", Range(0.0, 80.0)) = 40.0
     }
     SubShader
     {
@@ -45,6 +47,8 @@ Shader "David/Participating_Media/HeteroTransmittance"
             float   _Scattering;  // in-scattering, the probability of light being scatter into the viewing ray
             //float   _Density; // Scale the contribution of the extintion coefficient
             float   _Asymmetry;
+            float   _Frequency;
+            float   _SmokeScale;
             CBUFFER_END
 
             TEXTURE2D(_CameraDepthTexture);
@@ -119,6 +123,7 @@ Shader "David/Participating_Media/HeteroTransmittance"
                     float3 lightDirection   = light.direction;
 
                     float f = 0.0;
+                    f = _Time * _Frequency;
                     //f += sin(_Time * 5) * 20.0 + 5;// sin(_Time );
 
                     // 7. Start marching
@@ -131,9 +136,18 @@ Shader "David/Participating_Media/HeteroTransmittance"
                         float3 sample_position = rayOrigin + rayDirection * sample_t;
                         
                         // Density is changed by samplying the procedurally generated density field
-                        density = 4.0 * (noise(abs(sample_position.x + f), abs(sample_position.y - f), abs(sample_position.z + f)) + 1.0) / 2.0;
+                        //density = 4.0 * (noise(abs(sample_position.x + f), abs(sample_position.y - f), abs(sample_position.z + f)) + 1.0) / 2.0;
                         //density = (noise(sample_position.x ,sample_position.y , sample_position.z ) + 1.0) / 2.0;
                         
+                        /*
+                        density = _SmokeScale * (noise(     abs(_SmokeScale * sample_position.x + (f * 2.0)),
+                                                            abs(_SmokeScale * sample_position.y - f), 
+                                                            abs(_SmokeScale * sample_position.z + f)) + 1.0) * 0.5;
+                        */
+                        density = _SmokeScale * (noise(     _SmokeScale * sample_position.x + f,
+                                                            _SmokeScale * sample_position.y - (f * 2.0), 
+                                                            _SmokeScale * sample_position.z + f) + 1.0) * 0.5;
+
                         // current sample transparency, Beer's Law, represents how much of the light is being absorbed by the sample
                         float sample_attenuation = exp(-step_size * extinction * density);
                         
@@ -164,7 +178,7 @@ Shader "David/Participating_Media/HeteroTransmittance"
                         }
                     }
 
-                    volumeColor =  _BaseColor * (1.0 - transmittance) + accumulatedColor;
+                    volumeColor =  _BaseColor * (1.0 - transmittance) + accumulatedColor * transmittance;
                 }
 
                 return volumeColor;
