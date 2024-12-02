@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -8,6 +9,9 @@ using UnityEngine;
 /// </summary>
 public class AoEWindController : MonoBehaviour
 {
+    #region AoE Mechanics
+    [Tooltip("The SO that interfaces with Media Pipe")]
+    [SerializeField] private PoseScriptableObject _poseScriptableObject;
     [Tooltip("The radious of the dome")]
     [Range(1, 5)]
     [SerializeField] private float _areaOfEffect = 0.25f;
@@ -16,10 +20,22 @@ public class AoEWindController : MonoBehaviour
     [Range(1, 10)]
     [SerializeField] private float _effectDuration = 5;
 
+    private delegate void AoEWindControllerDelegate();
+
+    private event AoEWindControllerDelegate OnAoEActivated;
+
+    #endregion AoE Mechanics
+
     #region Shader parameters
     private Material _windMaterial;
+
+    [Tooltip("Debug only")]
+    [Range(0.0f, 0.89f)]
+    [SerializeField]
     private float _visibility;
-    [SerializeField] private float _visibilityDelta = 0.5f;
+    [Tooltip("How fast the wind fades in and out")]
+    [Range(0.01f, 2.0f)]
+    [SerializeField] private float _visibilityDelta = 0.8f;
     private float _effectCounter;
     [Tooltip("Read only")]
     [SerializeField] private bool _effectInProgress;
@@ -27,78 +43,84 @@ public class AoEWindController : MonoBehaviour
     private bool _hasFadedOut = false;
 
     [Tooltip("Enable changes on the shader at run-time")]
-    [SerializeField] private bool _update = false;
+    [SerializeField] private bool _debugginShader = false;
 
-    #endregion
+    #endregion Shader parameters
 
+    #region Unity MonoBehaviour
     private void Awake()
     {
-        //_visibility = 1.0f;
+        Init();
+    }
+
+    private void OnEnable()
+    {
+        OnAoEActivated += ActivateAoEWind;
+    }
+
+    private void OnDisable()
+    {
+        OnAoEActivated -= ActivateAoEWind;
+    }
+
+    private void Update()
+    {
+        if (_debugginShader) // Disables mechanics and allows to change the parameters of the shader
+        {
+            UpdateShaderVariables();
+            return;
+        }
+        UpdateShaderVariables();
+        AoEMechanicsLogic();
+
+    }
+    #endregion Unity MonoBehaviour
+
+    #region AoE Mechanics
+
+    /// <summary>
+    /// Set the shader variables and checks for the scriptable object
+    /// </summary>
+    private void Init()
+    {
+        if (_debugginShader)
+            _visibility = 0.99f;
+        else
+            _visibility = 0.0f;
+
         //_areaOfEffect = (transform.localScale * 0.25f).magnitude;
         _windMaterial = GetComponentInChildren<MeshRenderer>().material;
         UpdateShaderVariables();
 
-        //TODO 
-        //Activate();
-
-
-    }
-    private void Update()
-    {
-        Activate();
+        if (!_poseScriptableObject)
+            throw new NullReferenceException("The PoseScriptableObject is missing on the AoEWindController");
     }
 
     /// <summary>
-    /// Updates fields on the shader
+    /// Holds the mechanics based on the positions of the hands
     /// </summary>
-    private void UpdateShaderVariables()
+    private void AoEMechanicsLogic()
     {
-        _windMaterial.SetFloat("_Visibility", _visibility);
-        _windMaterial.SetVector("_Center", transform.position);
-        _windMaterial.SetFloat("_Radius", _areaOfEffect);
-    }
 
-    public void Activate()
-    {
-#if UNITY_EDITOR
-        Debug.Log($"_effectInProgress: {_effectInProgress}");
-#endif
-        if (_effectInProgress) return;
-        //_effectInProgress = true;
-        StartCoroutine(InvokingAoEWindDome());
-    }
+        if (_poseScriptableObject.isLeftHandAboveShoulder && _poseScriptableObject.isRightHandAboveShoulder && !_effectInProgress)
+            _effectInProgress = true;
 
-
-    /// <summary>
-    /// Triggers the AoE wind power. It will last until the counter reaches the effect Duration
-    /// </summary>
-    private IEnumerator InvokingAoEWindDome()
-    {
-        FadeInVisibility();
-        _effectCounter = 0.0f;
-
-        while (_effectCounter < _effectDuration)
+        if (!_poseScriptableObject.isLeftHandAboveShoulder && !_poseScriptableObject.isRightHandAboveShoulder)
         {
-            _effectCounter += Time.deltaTime;
-            // Once the effect duration is over, fade out
-
-            yield return null; // Continue until the effect duration has passed
+            _effectInProgress = false;
+            if (FadeOutVisibility())
+            {
+                _effectCounter = 0.0f;
+                _hasFadedIn = false;
+                _hasFadedOut = false;
+            }
         }
 
-        if (FadeOutVisibility())
-        {
-            _effectInProgress = false; // Allow re-triggering of the effect after fade out
-            _effectCounter = 0.0f;
-            _hasFadedIn = false;
-            _hasFadedOut = false;
-
-#if UNITY_EDITOR
-            Debug.Log($"_effectInProgress: {_effectInProgress}");
-#endif
-        }
-
-        /*
-        //_effectInProgress = true;
+        if (_effectInProgress)
+            OnAoEActivated?.Invoke();
+    }
+    private void ActivateAoEWind()
+    {
         FadeInVisibility();
         _effectCounter += 1.0f * Time.deltaTime;
 
@@ -109,32 +131,35 @@ public class AoEWindController : MonoBehaviour
                 _effectCounter = 0.0f;
                 _hasFadedIn = false;
                 _hasFadedOut = false;
-#if UNITY_EDITOR
-                Debug.Log($"_effectInProgress: {_effectInProgress}");
-#endif
-                StopAllCoroutines();
-                yield return null;
             }
 
-
 #if UNITY_EDITOR
+        Debug.Log($"_effectInProgress: {_effectInProgress}");
         Debug.Log($"_visibility: {_visibility} _effectCounter: {_effectCounter}");
 #endif
-*/
+    }
 
+    #endregion AoE Mechanics
+
+    #region Shader controllers
+    /// <summary>
+    /// Updates fields on the shader
+    /// </summary>
+    private void UpdateShaderVariables()
+    {
+        _windMaterial.SetFloat("_Visibility", _visibility);
+        _windMaterial.SetVector("_Center", transform.position);
+        _windMaterial.SetFloat("_Radius", _areaOfEffect);
     }
 
     private bool FadeInVisibility()
     {
         if (_hasFadedIn) return true;
 
-        //_visibilityDelta += 0.5f * Time.deltaTime;
-        //_visibility += _visibilityDelta * _visibilityDelta;
         _visibility += _visibilityDelta * _visibilityDelta * Time.deltaTime;
-        if (_visibility >= 1)
+        if (_visibility >= 0.89f)
         {
-            _visibility = 1.0f;
-            //_visibilityDelta = 0.0f;
+            _visibility = 0.89f;
             _hasFadedIn = true;
         }
 
@@ -148,14 +173,10 @@ public class AoEWindController : MonoBehaviour
     {
         if (_hasFadedOut) return true;
 
-        //_visibilityDelta += 0.5f * Time.deltaTime;
-        //_visibility -= _visibilityDelta * _visibilityDelta;
-
         _visibility -= _visibilityDelta * _visibilityDelta * Time.deltaTime;
         if (_visibility <= 0)
         {
             _visibility = 0.0f;
-            //_visibilityDelta = 0.0f;
             _hasFadedOut = true;
         }
 
@@ -163,6 +184,6 @@ public class AoEWindController : MonoBehaviour
 
         return false;
     }
-
+    #endregion Shader controllers
 
 }

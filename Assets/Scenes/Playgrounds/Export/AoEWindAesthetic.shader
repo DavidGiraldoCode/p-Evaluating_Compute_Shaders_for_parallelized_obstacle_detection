@@ -4,8 +4,10 @@ Shader "David/Participating_Media/AoEWindAesthetic"
     {
         _CameraDepthTexture ("Depth Texture", 2D) = "white" {}
         _BaseColor ("Base color", Color) = (1.0, 1.0, 1.0, 1.0)
-        //_Center ("Center", Vector) = (0.0, 0.0, 0.0, 0.0)
-        //_Radius ("Radius", Range(0.1, 4.0)) = 0.5
+        _Center ("Center", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _Radius ("Radius", Range(0.1, 4.0)) = 0.5
+        _Frequency ("Frequency", Range(0.0, 80.0)) = 40.0
+        _SmokeScale ("SmokeScale", Range(0.0, 10.0)) = 5.0
         _Absorption ("Absorption coefficient", Range(0.0, 1.0)) = 0.5
         _Scattering ("Scattering coefficient", Range(0.0, 1.0)) = 0.5
         _Asymmetry ("P(x) Asymmetry", Range(-1.0, 1.0)) = 0.0
@@ -40,6 +42,8 @@ Shader "David/Participating_Media/AoEWindAesthetic"
             float4  _BaseColor;
             float4  _Center;
             float   _Radius;
+            float   _Frequency;
+            float   _SmokeScale;
             float   _Absorption;  // absorption coefficient, the probability of the light being asorpted
             float   _Scattering;  // in-scattering, the probability of light being scatter into the viewing ray
             float   _Visibility;  // Controlls the overall alpha value
@@ -76,6 +80,14 @@ Shader "David/Participating_Media/AoEWindAesthetic"
                 return 1 / (4 * M_PI) * (1 - g * g) / (denom * sqrt(denom));
             }
 
+            // Converts depth buffer values into world space depth using near and far plane values
+            float linearizeDepth(float depth)
+            {
+                float zNear = _ProjectionParams.y; // Near plane of the camera
+                float zFar = _ProjectionParams.z;  // Far plane of the camera
+                return zNear * zFar / (zFar + depth * (zNear - zFar));
+            }
+
             v2f vert (mesh_data v)
             {
                 v2f o;
@@ -88,6 +100,23 @@ Shader "David/Participating_Media/AoEWindAesthetic"
 
             float4 frag (v2f i) : SV_Target
             {
+                // Sample the depth texture
+                float depthBufferValue = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, i.uv).r;
+
+                // Linearize the depth to world space
+                float sceneDepth = linearizeDepth(depthBufferValue);
+
+                // Get the fragment's world space depth
+                float fragmentDepth = length(i.positionWS - _WorldSpaceCameraPos);
+
+                // Compare depths
+                if (fragmentDepth > sceneDepth)
+                {
+                    // Discard if the fragment is occluded
+                    discard;
+                }
+
+                //_Visibility = 1.0;
                 // 1. Define the color of the participating medium
                 float4 volumeColor      = float4(0.0, 0.0, 0.0, 0.0);
                 float4 accumulatedColor = float4(0.0, 0.0, 0.0, 0.0);
@@ -119,7 +148,8 @@ Shader "David/Participating_Media/AoEWindAesthetic"
                     float3 lightDirection   = light.direction;
 
                     
-                    f += sin(_Time * 5) * 20.0 + 5;// sin(_Time );
+                    //f += sin(_Time * 5) * 20.0 + 5;// sin(_Time );
+                    f = _Time * _Frequency;// sin(_Time );
 
                     // 7. Start marching
                     for(uint n = 0; n < num_steps; ++n)
@@ -131,7 +161,12 @@ Shader "David/Participating_Media/AoEWindAesthetic"
                         float3 sample_position = rayOrigin + rayDirection * sample_t;
                         
                         // Density is changed by samplying the procedurally generated density field
-                        density = 4.0 * (noise(abs(sample_position.x + f), abs(sample_position.y - f), abs(sample_position.z + f)) + 1.0) / 2.0;
+                        
+                        density = _SmokeScale * (noise(     abs(_SmokeScale * sample_position.x + (f * 2.0)),
+                                                    abs(_SmokeScale * sample_position.y - f), 
+                                                    abs(_SmokeScale * sample_position.z + f)) + 1.0)  
+                                                                * 0.5;
+
                         //density = (noise(sample_position.x ,sample_position.y , sample_position.z ) + 1.0) / 2.0;
                         
                         // current sample transparency, Beer's Law, represents how much of the light is being absorbed by the sample
@@ -170,9 +205,9 @@ Shader "David/Participating_Media/AoEWindAesthetic"
                 {
                     discard;
                 }
-
-                volumeColor.a = _Visibility;
-
+                float4 visibility = float4(0,0,0,0);
+                volumeColor.a = volumeColor.a * _Visibility + (1 - _Visibility) * visibility.a;
+                //volumeColor.a = _Visibility;
                 return volumeColor;
 
             }
