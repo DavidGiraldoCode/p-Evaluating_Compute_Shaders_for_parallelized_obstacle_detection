@@ -101,7 +101,7 @@ Material:
     - _Absorption: 0.14
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _Asymmetry: 0.47
+    - _Asymmetry: 0.22
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -115,7 +115,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
-    - _Frequency: 35
+    - _Frequency: 55.9
     - _FrontFace: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -124,10 +124,10 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
-    - _Radius: 1.5
+    - _Radius: 1.69
     - _ReceiveShadows: 1
-    - _Scattering: 0.36
-    - _SmokeScale: 2.3
+    - _Scattering: 0.04
+    - _SmokeScale: 2.9
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -138,7 +138,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Absorption: {r: 0.52, g: 0, b: 0, a: 0}
-    - _BaseColor: {r: 0.69068176, g: 0.74233603, b: 0.7830189, a: 1}
+    - _BaseColor: {r: 0.43787825, g: 0.6094992, b: 0.754717, a: 1}
     - _Center: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

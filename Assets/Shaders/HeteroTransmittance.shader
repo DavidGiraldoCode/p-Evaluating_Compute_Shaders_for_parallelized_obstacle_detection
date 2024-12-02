@@ -144,9 +144,9 @@ Shader "David/Participating_Media/HeteroTransmittance"
                                                             abs(_SmokeScale * sample_position.y - f), 
                                                             abs(_SmokeScale * sample_position.z + f)) + 1.0) * 0.5;
                         */
-                        density = _SmokeScale * (noise(     _SmokeScale * sample_position.x + f,
-                                                            _SmokeScale * sample_position.y - (f * 2.0), 
-                                                            _SmokeScale * sample_position.z + f) + 1.0) * 0.5;
+                        density = _SmokeScale * (noise(     0.1 * _SmokeScale * sample_position.x + f,
+                                                            _SmokeScale * sample_position.y - (f * 1.0), 
+                                                            0.5 *_SmokeScale * sample_position.z + (f * 2.0)) + 1.0) * 0.5;
 
                         // current sample transparency, Beer's Law, represents how much of the light is being absorbed by the sample
                         float sample_attenuation = exp(-step_size * extinction * density);
