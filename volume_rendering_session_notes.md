@@ -11,3 +11,18 @@
 - `OnRenderImage()` Does not work for URP. Use [this instead](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.0/api/UnityEngine.Rendering.Universal.ScriptableRenderPass.html). Here's an [article](https://www.cyanilux.com/tutorials/custom-renderer-features/) about it.
 
 ![alt text](Assets/Art/Images/smoke_dome.gif)
+
+## Session 2024-12-02: Imploving smoke shape
+- **Objective:** Explore how the shape from the sampled noise can be distorted to improve the look of the smoke.
+```C++
+float f = _Time * _Frequency;
+return _SmokeScale * (noise(     0.1 * _SmokeScale * p.x - f,
+                                       _SmokeScale * p.y - (f * 1.0), 
+                                 0.5 * _SmokeScale * p.z + (f * 2.0)) + 1.0) * 0.5;
+```
+Adding independent scalar values (`0.1` and `0.5`) to the positions of the sample improved the look:
+![alt text](Assets/Art/Images/wind_dome_sound.gif)
+
+An improvement from prevoius version:
+
+![alt text](Assets/Art/Images/air_bending.gif)
