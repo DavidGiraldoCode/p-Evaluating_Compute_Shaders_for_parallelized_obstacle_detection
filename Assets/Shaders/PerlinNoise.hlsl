@@ -7,14 +7,15 @@ float hash(uint n) {
 }
 
 // Initialize the permutation table inline
-int p[256];
+int p[512];
 
 // Function to initialize the permutation table
 void initializePermutationTable()
 {
     for (int i = 0; i < 256; i++)
     {
-        p[i] = int((hash(i) - 1) * 255) ;
+        p[i] = int((hash(i) - 1) * 255);
+        p[i + 256] = p[i];
     }
 }
 

@@ -1,8 +1,8 @@
 Shader "David/Participating_Media/Volm_ActiveRecallTest_241206"
 {
-    Properties
+ /*    Properties
     {
-        _BaseColor
+       _BaseColor
         _Center
         _Radius
         _Scattering
@@ -146,5 +146,5 @@ Shader "David/Participating_Media/Volm_ActiveRecallTest_241206"
             }
             ENDHLSL
         }
-    }
+    }*/
 }
