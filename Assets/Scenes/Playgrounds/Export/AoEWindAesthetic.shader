@@ -163,9 +163,8 @@ Shader "David/Participating_Media/AoEWindAesthetic"
                         // Density is changed by samplying the procedurally generated density field
                         
                         density = _SmokeScale * (noise(     abs(_SmokeScale * sample_position.x + (f * 2.0)),
-                                                    abs(_SmokeScale * sample_position.y - f), 
-                                                    abs(_SmokeScale * sample_position.z + f)) + 1.0)  
-                                                                * 0.5;
+                                                            abs(_SmokeScale * sample_position.y - f), 
+                                                            abs(_SmokeScale * sample_position.z + f)) + 1.0) * 0.5;
 
                         //density = (noise(sample_position.x ,sample_position.y , sample_position.z ) + 1.0) / 2.0;
                         
