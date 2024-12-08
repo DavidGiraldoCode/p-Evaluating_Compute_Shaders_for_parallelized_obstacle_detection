@@ -98,10 +98,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Absorption: 0.15
+    - _Absorption: 0.388
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _Asymmetry: 0.62
+    - _Asymmetry: 0.42
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -115,7 +115,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
-    - _Frequency: 36.9
+    - _Frequency: 55.3
     - _FrontFace: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -126,8 +126,8 @@ Material:
     - _QueueOffset: 0
     - _Radius: 1.98
     - _ReceiveShadows: 1
-    - _Scattering: 0.136
-    - _SmokeScale: 2.18
+    - _Scattering: 0.39
+    - _SmokeScale: 2.84
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
